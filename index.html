@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raleigh Sales Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{--dg:#085041;--tl:#1D9E75;--tll:#e8f7f2;--tlm:#b2e0d0;--am:#f5a623;--re:#e74c3c;--gb:#f4f6f5;--gr:#d0dcd8;--td:#1a2e28;--tm:#4a6b62;--tt:#7a9b93;--rg:#ecf8f3;--to:#fff8e6;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gb);color:var(--td);}
+  header{background:var(--dg);color:#fff;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-size:1.15rem;font-weight:700;}
+  #last-updated{font-size:0.75rem;opacity:.75;}
+  main{max-width:1100px;margin:0 auto;padding:20px 18px 60px;}
+
+  /* UPLOAD */
+  .upload-zone{background:#fff;border:2px dashed var(--tl);border-radius:12px;padding:20px 24px;cursor:pointer;transition:all .2s;margin-bottom:14px;display:flex;align-items:center;gap:14px;}
+  .upload-zone:hover{background:var(--tll);}
+  .upload-zone .icon{font-size:1.8rem;flex-shrink:0;}
+  .upload-zone h2{color:var(--dg);font-size:.95rem;margin-bottom:2px;}
+  .upload-zone p{color:var(--tm);font-size:.78rem;}
+  .upload-zone input[type=file]{display:none;}
+  .browse-btn{margin-left:auto;flex-shrink:0;background:var(--tl);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .browse-btn:hover{background:var(--dg);}
+
+  /* STATUS */
+  .sbar{padding:9px 14px;border-radius:8px;font-size:.81rem;margin-bottom:12px;display:none;}
+  .sbar.show{display:block;} .sbar.ok{background:var(--tl);color:#fff;} .sbar.error{background:var(--re);color:#fff;}
+
+  /* DISCREPANCIES */
+  .dbox{background:#fff8e6;border:1.5px solid var(--am);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:none;}
+  .dbox.show{display:block;}
+  .dbox h3{color:#b7760a;font-size:.86rem;margin-bottom:8px;}
+  .di{font-size:.78rem;margin-bottom:7px;padding:5px 9px;border-left:3px solid var(--am);background:#fff;border-radius:0 5px 5px 0;}
+  .di strong{display:block;color:#8a5a00;margin-bottom:1px;}
+
+
+  /* WD FLAG BOX */
+  .wdfbox{background:#fff0f0;border:1.5px solid #e74c3c;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:none;}
+  .wdfbox.show{display:block;}
+  .wdfbox h3{color:#c0392b;font-size:.86rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .wdfi{font-size:.78rem;margin-bottom:6px;padding:5px 9px;border-left:3px solid #e74c3c;background:#fff;border-radius:0 5px 5px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .wdfi strong{color:#922b21;min-width:70px;}
+  .wdfi .wdfi-tag{background:#fce4e4;color:#922b21;border-radius:4px;padding:1px 6px;font-size:.74rem;font-weight:700;}
+  .wdfbox-toggle{font-size:.74rem;background:none;border:none;color:#e74c3c;cursor:pointer;text-decoration:underline;margin-left:auto;}
+
+  /* PANELS */
+  .panel{background:#fff;border-radius:12px;border:1.5px solid var(--gr);margin-bottom:14px;overflow:hidden;}
+  .ph{background:var(--dg);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+  .ph h3{font-size:.86rem;}
+  .ti{transition:transform .2s;} .ph.open .ti{transform:rotate(180deg);}
+  .pb{display:none;padding:14px 16px;} .pb.open{display:block;}
+  .ng{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:7px;}
+  .nr{display:flex;align-items:center;gap:7px;background:var(--tll);border-radius:8px;padding:6px 9px;}
+  .nr label{font-size:.78rem;flex:1;}
+  .nr input{width:52px;text-align:center;border:1.5px solid var(--tlm);border-radius:5px;padding:3px;font-size:.85rem;font-weight:700;color:var(--dg);}
+  .nr input:focus{outline:none;border-color:var(--tl);}
+  .nr .db{background:none;border:none;color:#ccc;cursor:pointer;font-size:.95rem;padding:0 2px;}
+  .nr .db:hover{color:var(--re);}
+  .anr{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--gr);}
+  .anr select,.anr input{border:1.5px solid var(--gr);border-radius:5px;padding:5px 7px;font-size:.78rem;background:#fff;}
+  .btn{padding:6px 13px;border:none;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;}
+  .btn-tl{background:var(--tl);color:#fff;} .btn-tl:hover{background:var(--dg);}
+  .btn-ol{background:#fff;color:var(--dg);border:1.5px solid var(--dg);} .btn-ol:hover{background:var(--dg);color:#fff;}
+  .btn-sm{padding:4px 9px;font-size:.74rem;}
+
+  /* DATE EDITOR */
+  .de-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px;margin-bottom:10px;}
+  .de-row{background:var(--tll);border-radius:8px;padding:7px 10px;}
+  .de-row label{font-size:.76rem;color:var(--td);display:block;margin-bottom:4px;font-weight:600;}
+  .de-inputs{display:flex;gap:6px;align-items:center;}
+  .de-inputs span{font-size:.74rem;color:var(--tm);}
+  .de-inputs input[type=date]{border:1.5px solid var(--tlm);border-radius:5px;padding:3px 6px;font-size:.78rem;flex:1;}
+  .de-filter{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .de-filter select{border:1.5px solid var(--gr);border-radius:6px;padding:5px 8px;font-size:.8rem;background:#fff;}
+
+  /* YEAR TABS + ACTIONS */
+  .ytabs{display:flex;gap:7px;margin-bottom:12px;}
+  .ytab{padding:7px 20px;border-radius:7px;cursor:pointer;font-weight:600;font-size:.86rem;border:2px solid var(--gr);background:#fff;color:var(--tm);transition:all .15s;}
+  .ytab.active{background:var(--dg);color:#fff;border-color:var(--dg);}
+  .abar{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+  .stext{color:var(--tm);font-size:.8rem;margin-left:auto;font-weight:600;}
+
+  /* RESULTS */
+  .rs{background:#fff;border-radius:12px;border:1.5px solid var(--gr);overflow:hidden;}
+  .ch{background:var(--dg);color:#fff;padding:9px 16px;font-size:.86rem;font-weight:700;}
+  .dh{background:#2E6E8E;color:#fff;padding:6px 16px;font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:#daeef7;color:var(--dg);font-size:.76rem;font-weight:700;padding:6px 14px;text-align:left;border-bottom:1.5px solid var(--gr);}
+  thead th:not(:first-child){text-align:center;}
+  tbody td{padding:5px 14px;font-size:.79rem;border-bottom:1px solid #eef2f1;background:#fff;}
+  tbody td:not(:first-child){text-align:center;font-weight:600;}
+  tbody tr.hc td{background:var(--rg);}
+  .tr td{background:var(--to)!important;font-weight:700;font-size:.81rem;border-top:2px solid #e8d5a0;}
+  .zv{color:#ccc;font-weight:400!important;}
+  .nc{color:var(--dg);}
+  .ccb{display:block;width:100%;padding:5px 14px;background:var(--tll);border:none;border-top:1px solid var(--tlm);font-size:.74rem;color:var(--tl);cursor:pointer;font-weight:600;text-align:right;}
+  .ccb:hover{background:var(--tlm);}
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--dg);color:#fff;padding:10px 18px;border-radius:8px;font-size:.82rem;font-weight:600;opacity:0;transform:translateY(7px);transition:all .2s;pointer-events:none;z-index:999;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  @media(max-width:600px){header{padding:11px 12px;}main{padding:12px 10px 40px;}.upload-zone{flex-direction:column;padding:16px;}.browse-btn{margin:0;}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌿 Raleigh International — Sales Tracker</h1>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span id="last-updated">No file loaded</span>
+    <button onclick="syncAllToCloud()" style="background:rgba(255,255,255,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.4);border-radius:7px;padding:6px 14px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">☁ Sync</button>
+  </div>
+</header>
+<main>
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('fi').click()">
+    <div class="icon">📊</div>
+    <div>
+      <h2>Upload passenger registry to update numbers</h2>
+      <p>Drop your .xlsx file here · 2026 & 2027 · 2 & 3 week venturers silently excluded</p>
+    </div>
+    <button class="browse-btn" onclick="event.stopPropagation();document.getElementById('fi').click()">Browse file</button>
+    <input type="file" id="fi" accept=".xlsx" onchange="handleFile(this.files[0])">
+  </div>
+
+  <div class="sbar" id="sbar"></div>
+  <div class="dbox" id="dbox"><h3>⚠️ Data discrepancies found — please check these rows in your source file</h3><div id="dlist"></div></div>
+
+  <!-- NATIONALS -->
+  <div class="panel">
+    <div class="ph" id="nph" onclick="tog('nph','npb')"><h3>✏️ Nationals — click to edit</h3><span class="ti">▼</span></div>
+    <div class="pb" id="npb">
+      <p style="font-size:.78rem;color:var(--tm);margin-bottom:10px">Nationals are subtracted from venturer counts to give the Net figure. Changes save automatically.</p>
+      <div class="ng" id="ng"></div>
+      <div class="anr">
+        <span style="font-size:.78rem;font-weight:600;color:var(--tm)">Add national:</span>
+        <select id="a-yr"><option>2026</option><option>2027</option></select>
+        <select id="a-cy"><option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option></select>
+        <select id="a-de"><option>Costa Rica</option><option>South Africa</option><option>Borneo</option></select>
+        <select id="a-wt"><option value="10w">10 Weeks</option><option value="7A">7A</option><option value="7B">7B</option><option value="5A">5A</option><option value="5B">5B</option><option value="4A">4A</option><option value="4B">4B</option></select>
+        <input type="number" id="a-cnt" value="1" min="0" style="width:52px">
+        <button class="btn btn-tl btn-sm" onclick="addNat()">+ Add</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EXTENSIONS PANEL -->
+  <div class="panel">
+    <div class="ph" id="exph" onclick="tog('exph','expb')"><h3>📈 Extensions — click to add post expedition changes</h3><span class="ti">▼</span></div>
+    <div class="pb" id="expb">
+      <p style="font-size:.78rem;color:var(--tm);margin-bottom:10px">Add one entry per person who extended. Pre-Exped. shows raw numbers; Post Exped. reflects extensions.</p>
+      <div class="ng" id="ext-list"></div>
+      <div class="anr" style="margin-top:10px;flex-wrap:wrap;gap:8px">
+        <span style="font-size:.78rem;font-weight:600;color:var(--tm)">Add extension:</span>
+        <input id="e-cid" type="text" placeholder="Client ID" style="border:1.5px solid var(--gr);border-radius:6px;padding:5px 8px;font-size:.82rem;width:110px">
+        <select id="e-yr"><option>2026</option><option>2027</option></select>
+        <select id="e-cy"><option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option></select>
+        <select id="e-de"><option>Costa Rica</option><option>South Africa</option><option>Borneo</option></select>
+        <span style="font-size:.78rem;color:var(--tm)">From:</span>
+        <select id="e-fr"><option value="10w">10 Weeks</option><option value="7A">7A</option><option value="7B">7B</option><option value="5A">5A</option><option value="5B">5B</option><option value="4A">4A</option><option value="4B">4B</option></select>
+        <span style="font-size:.78rem;color:var(--tm)">→ To:</span>
+        <select id="e-to"><option value="10w">10 Weeks</option><option value="7A">7A</option><option value="7B">7B</option><option value="5A">5A</option><option value="5B">5B</option><option value="4A">4A</option><option value="4B">4B</option></select>
+        <button class="btn btn-tl btn-sm" onclick="addExt()">+ Add Extension</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- DATE EDITOR -->
+  <div class="panel" id="date-editor-panel">
+    <div class="ph" id="deph" onclick="tog('deph','depb')"><h3>📅 Edit Expedition Dates — click to update cycle boundaries</h3><span class="ti">▼</span></div>
+    <div class="pb" id="depb">
+      <p style="font-size:.78rem;color:var(--tm);margin-bottom:10px">Update these if expedition dates change. Changes apply immediately to counting and display. Saved automatically.</p>
+      <div class="de-filter">
+        <select id="de-yr" onchange="renderDateEditor()"><option value="2026">2026</option><option value="2027">2027</option></select>
+        <select id="de-cy" onchange="renderDateEditor()"><option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option></select>
+        <select id="de-de" onchange="renderDateEditor()"><option value="all">All destinations</option><option>Costa Rica</option><option>South Africa</option><option>Borneo</option></select>
+      </div>
+      <div class="de-grid" id="de-grid"></div>
+      <button class="btn btn-tl btn-sm" onclick="resetDates()" style="margin-top:10px">↩ Reset to original dates</button>
+    </div>
+  </div>
+
+  <div class="ytabs">
+    <button class="ytab active" id="tab2026" onclick="switchYear(2026,this)">2026</button>
+    <button class="ytab" id="tab2027" onclick="switchYear(2027,this)">2027</button>
+    <button class="ytab" id="tab2028" onclick="switchYear(2028,this)">2028</button>
+    <button class="ytab" id="tabWD" onclick="switchToWD(this)">W &amp; D</button>
+    <button class="ytab" id="tabLegacy" onclick="switchToLegacy(this)">Legacy</button>
+    <button class="ytab" id="tabPartners" onclick="switchToPartners(this)">Partners</button>
+  </div>
+  <div class="abar">
+    <button class="btn btn-tl" onclick="dlExcel()">⬇ Download Excel</button>
+    <button class="btn btn-ol" onclick="copyAll()">📋 Copy year to clipboard</button>
+    <span class="stext" id="stext">Upload a file to see totals</span>
+  </div>
+  <div id="r2026" class="rs"></div>
+  <div id="r2027" class="rs" style="display:none"></div>
+  <div id="r2028" class="rs" style="display:none"></div>
+
+  <!-- W&D TRACKER -->
+  <div id="rLegacy" style="display:none"><div id="legacy-content"><p style="color:var(--tt);font-size:.82rem;padding:20px;text-align:center">Upload a registry to see Legacy bookings</p></div></div>
+
+  <!-- PARTNERS TAB -->
+  <div id="rPartners" style="display:none">
+    <!-- Manage partner names -->
+    <div style="background:#fff;border-radius:12px;border:1.5px solid var(--gr);padding:18px;margin-bottom:16px">
+      <p style="font-size:.9rem;font-weight:700;color:var(--dg);margin-bottom:12px">Partner Organisations</p>
+      <div id="partner-names-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="new-partner-name" type="text" placeholder="Add new partner name…" style="border:1.5px solid var(--gr);border-radius:6px;padding:6px 10px;font-size:.82rem;flex:1;background:#fff">
+        <button class="btn btn-tl btn-sm" onclick="addPartnerName()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Add sign-up form -->
+    <div style="background:#fff;border-radius:12px;border:1.5px solid var(--gr);padding:18px;margin-bottom:16px">
+      <p style="font-size:.9rem;font-weight:700;color:var(--dg);margin-bottom:12px">+ Add Partner Sign-up</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Client ID</label>
+          <input id="pt-clientid" type="text" placeholder="e.g. 300079" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem">
+        </div>
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Year</label>
+          <select id="pt-year" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:#fff" onchange="updatePtLength()">
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Cycle</label>
+          <select id="pt-cycle" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:#fff" onchange="updatePtLength()">
+            <option value="1">C1</option>
+            <option value="2">C2</option>
+            <option value="3">C3</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Length</label>
+          <select id="pt-length" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:#fff"></select>
+        </div>
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Country</label>
+          <select id="pt-country" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:#fff">
+            <option value="CR">Costa Rica</option>
+            <option value="SA">South Africa</option>
+            <option value="BN">Borneo</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.76rem;font-weight:600;color:var(--tm);display:block;margin-bottom:4px">Partner</label>
+          <select id="pt-partner" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:#fff"></select>
+        </div>
+      </div>
+      <button class="btn btn-tl" onclick="addPartnerEntry()">+ Add Sign-up</button>
+    </div>
+
+    <!-- Table by Year/Cycle -->
+    <div id="partner-table-wrap"></div>
+  </div>
+
+  <div id="rWD" style="display:none">
+
+    <!-- Add form — always visible -->
+    <div style="background:white;border-radius:12px;border:1.5px solid var(--gr);padding:18px;margin-bottom:16px">
+      <p style="font-size:.9rem;font-weight:700;color:var(--dg);margin-bottom:12px">+ Add Withdrawal / Deferral</p>
+
+      <!-- Type selector -->
+      <div style="display:flex;gap:16px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;font-weight:600">
+          <input type="radio" name="wdtype" value="withdrawal" checked onchange="wdTypeChange()"> Withdrawal
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;font-weight:600">
+          <input type="radio" name="wdtype" value="deferral" onchange="wdTypeChange()"> Deferral
+        </label>
+      </div>
+
+      <!-- Entry status -->
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center">
+        <label style="font-size:.76rem;font-weight:600;color:var(--tm)">Entry status:</label>
+        <select id="wd-wdstatus" style="border:1.5px solid var(--gr);border-radius:6px;padding:5px 8px;font-size:.82rem;background:white">
+          <option value="Completed">Completed</option>
+          <option value="In Progress">In Progress</option>
+        </select>
+      </div>
+
+      <!-- Fields grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px">
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Client ID</label>
+          <input id="wd-cid" type="text" placeholder="e.g. 12345" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem"></div>
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Year</label>
+          <select id="wd-year" onchange="updateWDLength('wd-year','wd-cycle','wd-length')" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+            <option>2026</option><option>2027</option><option>2028</option></select></div>
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Country</label>
+          <select id="wd-country" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+            <option>Costa Rica</option><option>South Africa</option><option>Borneo</option></select></div>
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Cycle</label>
+          <select id="wd-cycle" onchange="updateWDLength('wd-year','wd-cycle','wd-length')" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+            <option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option></select></div>
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Week Length</label>
+          <select id="wd-length" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+            <option value="10w">10 Weeks</option><option value="7A">7A</option><option value="7B">7B</option>
+            <option value="5A">5A</option><option value="5B">5B</option><option value="4A">4A</option><option value="4B">4B</option></select></div>
+        <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Date (DD/MM/YYYY)</label>
+          <input id="wd-date" type="text" placeholder="e.g. 01/10/2026" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem"></div>
+      </div>
+
+      <!-- Deferral extra fields -->
+      <div id="wd-deferral-extra" style="display:none;background:var(--tll);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <p style="font-size:.76rem;font-weight:700;color:var(--dg);margin-bottom:8px">→ Deferring TO:</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+          <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">New Year</label>
+            <select id="wd-nyear" onchange="updateWDLength('wd-nyear','wd-ncycle','wd-nlength')" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+              <option>2026</option><option>2027</option><option>2028</option></select></div>
+          <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">New Country</label>
+            <select id="wd-ncountry" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+              <option>Costa Rica</option><option>South Africa</option><option>Borneo</option></select></div>
+          <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">New Cycle</label>
+            <select id="wd-ncycle" onchange="updateWDLength('wd-nyear','wd-ncycle','wd-nlength')" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+              <option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option></select></div>
+          <div><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">New Week Length</label>
+            <select id="wd-nlength" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white">
+              <option value="10w">10 Weeks</option><option value="7A">7A</option><option value="7B">7B</option>
+              <option value="5A">5A</option><option value="5B">5B</option><option value="4A">4A</option><option value="4B">4B</option></select></div>
+        </div>
+      </div>
+
+      <!-- Reason + submit -->
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><label style="font-size:.74rem;font-weight:600;display:block;margin-bottom:3px;color:var(--tm)">Reason</label>
+          <select id="wd-reason" style="width:100%;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem;background:white"></select></div>
+        <button class="btn btn-tl" onclick="addWD()" style="white-space:nowrap">+ Add Entry</button>
+      </div>
+    </div>
+
+    <!-- Manage reasons -->
+    <div style="background:white;border-radius:12px;border:1.5px solid var(--gr);padding:14px 16px;margin-bottom:16px">
+      <p style="font-size:.85rem;font-weight:700;color:var(--dg);margin-bottom:10px">⚙ Manage Reasons List</p>
+      <div id="wd-reasons-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="wd-new-reason" type="text" placeholder="New reason…" style="flex:1;border:1.5px solid var(--gr);border-radius:6px;padding:6px 8px;font-size:.82rem">
+        <button class="btn btn-tl btn-sm" onclick="addWDReason()">+ Add Reason</button>
+        <button class="btn btn-sm" onclick="resetWDReasons()" style="background:#f5f5f5;color:var(--tm);border:1.5px solid var(--gr)">Reset to defaults</button>
+      </div>
+    </div>
+
+    <!-- W&D auto-flag panel -->
+    <div class="wdfbox" id="wdfbox">
+      <h3>🔴 Possible missing W&amp;D entries — found in Master Doc but not in tracker
+        <button class="wdfbox-toggle" onclick="document.getElementById('wdfbox-list').style.display=document.getElementById('wdfbox-list').style.display==='none'?'block':'none'">show/hide</button>
+      </h3>
+      <p style="font-size:.76rem;color:#922b21;margin-bottom:8px">These clients have a Cancelled or Deferred status in the uploaded registry but do not appear in the W&amp;D tracker. Please check and add entries if needed.</p>
+      <div id="wdfbox-list"></div>
+    </div>
+
+    <!-- Breakdown by year -->
+    <div id="wd-list"></div>
+
+    <!-- Bottom export buttons -->
+    <div id="wd-exports" style="margin-top:18px;background:white;border-radius:12px;border:1.5px solid var(--gr);padding:16px">
+      <p style="font-size:.83rem;font-weight:700;color:var(--dg);margin-bottom:12px">📥 Export & Analysis</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-tl" onclick="exportWDExcel()">⬇ Download W&D Table (.xlsx)</button>
+        <button class="btn btn-ol" onclick="showWDChart()">📊 Year × Month × Reason Chart</button>
+        <button class="btn btn-ol" onclick="copyWDFullTable()">📋 Copy full W&D table</button>
+      </div>
+      <div id="wd-chart-area" style="display:none;margin-top:16px"></div>
+    </div>
+
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DEFAULT DATES ────────────────────────────────────────────────────────────
+const DEFAULT_CB = {
+  2026:{
+    1:{CR:{'10w':[20260210,20260417],'7A':[20260210,20260328],'7B':[20260302,20260417],'5A':[20260210,20260319]},SA:{'10w':[20260210,20260417],'7A':[20260210,20260328],'7B':[20260302,20260417],'5A':[20260210,20260318]},BN:{'10w':[20260210,20260417],'7A':[20260210,20260328],'7B':[20260302,20260417],'5A':[20260210,20260317]}},
+    2:{CR:{'10w':[20260629,20260903],'7A':[20260629,20260814],'7B':[20260719,20260903],'5A':[20260629,20260803],'5B':[20260719,20260823],'4A':[20260629,20260724],'4B':[20260719,20260814]},SA:{'10w':[20260629,20260903],'7A':[20260629,20260814],'7B':[20260719,20260903],'5A':[20260629,20260803],'5B':[20260719,20260824],'4A':[20260629,20260724],'4B':[20260719,20260814]}},
+    3:{CR:{'10w':[20261013,20261218],'7A':[20261013,20261128],'7B':[20261102,20261218],'5A':[20261013,20261117],'4A':[20261013,20261109]},SA:{'10w':[20261013,20261218],'7A':[20261013,20261128],'7B':[20261102,20261218],'5A':[20261013,20261118],'4A':[20261013,20261107]},BN:{'10w':[20261013,20261218],'7A':[20261013,20261128],'7B':[20261102,20261218],'5A':[20261013,20261119],'4A':[20261013,20261107]}},
+  },
+  2027:{
+    1:{CR:{'10w':[20270208,20270415],'7A':[20270208,20270326],'7B':[20270228,20270415],'5A':[20270208,20270315],'4A':[20270208,20270307]},SA:{'10w':[20270208,20270415],'7A':[20270208,20270326],'7B':[20270228,20270415],'5A':[20270208,20270316],'4A':[20270208,20270305]},BN:{'10w':[20270208,20270415],'7A':[20270208,20270326],'7B':[20270228,20270415],'5A':[20270208,20270315],'4A':[20270208,20270305]}},
+    2:{CR:{'10w':[20270625,20270830],'7A':[20270625,20270810],'7B':[20270625,20270810],'5A':[20270625,20270731],'5B':[20270715,20270820],'8w':[20270626,20270819],'4A':[20270626,20270722],'4B':[20270723,20270818]},SA:{'10w':[20270625,20270830],'7A':[20270625,20270810],'5A':[20270625,20270731],'4w':[20270625,20270720],'8w':[20270626,20270819]}},
+    3:{CR:{'10w':[20271012,20271217],'7A':[20271012,20271130],'5A':[20271012,20271116],'8w':[20271013,20271206],'4A':[20271013,20271108],'4B':[20271109,20271205]},SA:{'10w':[20271012,20271217],'8w':[20271013,20271206]},BN:{'10w':[20271012,20271217],'8w':[20271013,20271206],'4A':[20271013,20271108],'4B':[20271109,20271205]}},
+  },
+  2028:{
+    1:{CR:{'8w':[20280208,20280402],'4A':[20280208,20280305],'4B':[20280306,20280401]},SA:{'8w':[20280208,20280402],'4A':[20280208,20280305],'4B':[20280306,20280401]},BN:{'8w':[20280208,20280402],'4A':[20280208,20280305],'4B':[20280306,20280401]}},
+    2:{CR:{'8w':[20280623,20280816],'4A':[20280623,20280719],'4B':[20280720,20280815]},SA:{'8w':[20280623,20280816]}},
+    3:{CR:{'8w':[20281012,20281205],'4A':[20281012,20281107],'4B':[20281108,20281204]},SA:{'8w':[20281012,20281205]},BN:{'8w':[20281012,20281205],'4A':[20281012,20281107],'4B':[20281108,20281204]}},
+  }
+};
+
+// Dest key mapping
+const DK = {'Costa Rica':'CR','South Africa':'SA','Borneo':'BN'};
+const KD = {'CR':'Costa Rica','SA':'South Africa','BN':'Borneo'};
+const DEST_ORDER = ['Costa Rica','South Africa','Borneo'];
+const WTC={'2026|1':['10w','7A','7B','5A'],'2026|2':['10w','7A','7B','5A','5B','4A','4B'],'2026|3':['10w','7A','7B','5A','4A'],'2027|1':['10w','7A','7B','5A','4A'],'2027|2':['10w','7A','7B','5A','5B','8w','4A','4B','4w'],'2027|3':['10w','7A','7B','5A','8w','4A','4B'],'2028|1':['8w','4A','4B'],'2028|2':['8w','4A','4B'],'2028|3':['8w','4A','4B']};
+const LM={'10w':'10 Weeks','8w':'8 Weeks','7A':'7 Weeks – A','7B':'7 Weeks – B','5A':'5 Weeks – A','5B':'5 Weeks – B','4w':'4 Weeks','4A':'4 Weeks – A','4B':'4 Weeks – B','legacy':'Legacy'};
+const CL={1:'Cycle 1 — February to April',2:'Cycle 2 — June to September',3:'Cycle 3 — October to December'};
+const MNS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ─── PERSISTENT STATE (localStorage) ─────────────────────────────────────────
+function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}}
+
+let NATIONALS = ls('raleigh_nationals') || {'2026|1|Borneo|10w':1,'2026|1|Borneo|5A':1,'2026|1|South Africa|10w':2,'2026|1|Costa Rica|10w':3,'2026|2|Costa Rica|10w':1};
+let CB = (function(){
+  const stored = ls('raleigh_cb') || {};
+  // Start from DEFAULT_CB as the source of truth for which years/cycles/week-types exist.
+  // Overlay any user-customised date values from stored, but ONLY for week types that
+  // still exist in DEFAULT_CB — this way removed products (e.g. old 10w/7A on 2027 C2)
+  // don't come back from cache, and new ones (8w) always appear.
+  const merged = JSON.parse(JSON.stringify(DEFAULT_CB));
+  Object.keys(merged).forEach(yr=>{
+    Object.keys(merged[yr]).forEach(cy=>{
+      Object.keys(merged[yr][cy]).forEach(dk=>{
+        const storedEntry = ((stored[yr]||{})[cy]||{})[dk]||{};
+        Object.keys(merged[yr][cy][dk]).forEach(wt=>{
+          if(storedEntry[wt]) merged[yr][cy][dk][wt]=storedEntry[wt];
+        });
+      });
+    });
+  });
+  return merged;
+})();
+let currentCounts = ls('raleigh_counts') || {};
+let EXTENSIONS = ls('raleigh_extensions') || [];
+const WD_OFFLINE = [{"type":"deferral","wdStatus":"Completed","clientId":"237886","year":2025,"country":"Borneo","cycle":3,"length":"10w","reason":"Old illness flare-up","date":"29/08/2025","recordedMonth":7,"recordedYear":2025,"toYear":2026,"toCountry":"Borneo","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"237300","year":2025,"country":"Costa Rica","cycle":3,"length":"7B","reason":"Wasn't cleared by her GP to go","date":"","recordedMonth":0,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"229526","year":2025,"country":"Costa Rica","cycle":1,"length":"7B","reason":"She has a job during her current Exped","date":"07/11/2025","recordedMonth":10,"recordedYear":2025,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"7B"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229526","year":2026,"country":"Costa Rica","cycle":1,"length":"7B","reason":"University commitments","date":"24/11/2025","recordedMonth":10,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229418","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Previously deferred from 2025. Now no response","date":"12/05/2026","recordedMonth":4,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"239992","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Wanted to go for less time","date":"11/02/2026","recordedMonth":1,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"5A"},{"type":"withdrawal","wdStatus":"Completed","clientId":"239992","year":2026,"country":"Costa Rica","cycle":2,"length":"5A","reason":"No longer wishes to attend","date":"03/06/2026","recordedMonth":5,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"271720","year":2026,"country":"Costa Rica","cycle":1,"length":"5A","reason":"Family issues","date":"23/12/2025","recordedMonth":11,"recordedYear":2025,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"5A"},{"type":"deferral","wdStatus":"Completed","clientId":"244450","year":2025,"country":"Borneo","cycle":3,"length":"10w","reason":"Personal reasons","date":"","recordedMonth":0,"recordedYear":2025,"toYear":2026,"toCountry":"Borneo","toCycle":1,"toLength":"10w"},{"type":"deferral","wdStatus":"Completed","clientId":"235629","year":2026,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Due to back injury","date":"19/02/2026","recordedMonth":1,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"7B"},{"type":"withdrawal","wdStatus":"Completed","clientId":"250123","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Unable to be supported on Exped due to medical","date":"10/10/2025","recordedMonth":9,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"270732","year":2026,"country":"South Africa","cycle":1,"length":"5A","reason":"Decided wasn't for him","date":"12/05/2025","recordedMonth":4,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"234202","year":2027,"country":"South Africa","cycle":1,"length":"7A","reason":"Venturer changed her mind and doesn't want to join","date":"11/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"229449","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Plans no longer fitted with university starting in Sep","date":"07/05/2026","recordedMonth":4,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"231827","year":2025,"country":"Borneo","cycle":3,"length":"5w","reason":"Dates didn't work due to school","date":"15/08/2025","recordedMonth":7,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231831","year":2026,"country":"Costa Rica","cycle":2,"length":"5A","reason":"No longer wishes to attend","date":"27/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"250493","year":2025,"country":"Costa Rica","cycle":3,"length":"7B","reason":"Needs more time for financial reasons","date":"","recordedMonth":0,"recordedYear":2025,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"10w"},{"type":"withdrawal","wdStatus":"In Progress","clientId":"269457","year":2026,"country":"Costa Rica","cycle":1,"length":"10w","reason":"GP advised to go later when blood sugar levels balance","date":"23/12/2025","recordedMonth":11,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"229356","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Got accepted to university","date":"09/03/2025","recordedMonth":2,"recordedYear":2025,"toYear":2026,"toCountry":"South Africa","toCycle":2,"toLength":"4A"},{"type":"deferral","wdStatus":"Completed","clientId":"276077","year":2026,"country":"South Africa","cycle":1,"length":"5A","reason":"Deferred to a longer cycle","date":"13/01/2026","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"South Africa","toCycle":1,"toLength":"7A"},{"type":"deferral","wdStatus":"Completed","clientId":"232011","year":2026,"country":"South Africa","cycle":2,"length":"10w","reason":"Starting uni and won't have enough time to fundraise","date":"20/10/2025","recordedMonth":9,"recordedYear":2025,"toYear":2027,"toCountry":"South Africa","toCycle":2,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229525","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"No response after multiple contact attempts","date":"25/08/2025","recordedMonth":7,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229966","year":2026,"country":"South Africa","cycle":2,"length":"10w","reason":"Can't afford Expedition","date":"11/07/2025","recordedMonth":6,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"276919","year":2026,"country":"South Africa","cycle":2,"length":"7A","reason":"Work opportunity came up","date":"11/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"250218","year":2026,"country":"Costa Rica","cycle":1,"length":"5w","reason":"Has other travel plans","date":"11/10/2025","recordedMonth":9,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"246578","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Injured knee","date":"09/09/2025","recordedMonth":8,"recordedYear":2025,"toYear":2026,"toCountry":"South Africa","toCycle":1,"toLength":"10w"},{"type":"deferral","wdStatus":"Completed","clientId":"235561","year":2026,"country":"South Africa","cycle":2,"length":"5w","reason":"Extending time to do full trek","date":"08/04/2026","recordedMonth":3,"recordedYear":2026,"toYear":2026,"toCountry":"South Africa","toCycle":2,"toLength":"7w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229365","year":2026,"country":"Borneo","cycle":1,"length":"10w","reason":"Was part of gap holiday plans, no longer doing those","date":"30/10/2025","recordedMonth":9,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229724","year":2026,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Deferred from 2025 programme and unable to make C3 2026","date":"17/03/2026","recordedMonth":2,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"249912","year":2026,"country":"Costa Rica","cycle":2,"length":"7A","reason":"Wanted to go for less time","date":"11/02/2026","recordedMonth":1,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"5A"},{"type":"withdrawal","wdStatus":"Completed","clientId":"271689","year":2026,"country":"Borneo","cycle":1,"length":"7A","reason":"Due to school, needs to defer later","date":"23/12/2025","recordedMonth":11,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"246077","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Not ready mentally, failed his exams","date":"","recordedMonth":0,"recordedYear":2025,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"247870","year":2025,"country":"Costa Rica","cycle":3,"length":"7B","reason":"Didn't pay deposit","date":"","recordedMonth":0,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"263635","year":2026,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Waiting for brother to go through surgery","date":"01/05/2026","recordedMonth":4,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"7B"},{"type":"deferral","wdStatus":"Completed","clientId":"270654","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Has to do exam retakes, can no longer do full 10W expedition","date":"13/03/2026","recordedMonth":2,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"4A"},{"type":"deferral","wdStatus":"Completed","clientId":"270654","year":2026,"country":"Costa Rica","cycle":2,"length":"4w","reason":"Personal circumstances (uni and burnout)","date":"20/04/2026","recordedMonth":3,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"4w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"266068","year":2026,"country":"Costa Rica","cycle":2,"length":"5B","reason":"Asked to defer due to exams, then had no response","date":"12/05/2026","recordedMonth":4,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"278726","year":2026,"country":"Costa Rica","cycle":2,"length":"7A","reason":"Internship opportunity came up","date":"19/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"237879","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Personal family issues","date":"04/07/2025","recordedMonth":6,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"237544","year":2025,"country":"Borneo","cycle":3,"length":"7w","reason":"Personal","date":"08/11/2025","recordedMonth":10,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"279113","year":2026,"country":"Costa Rica","cycle":2,"length":"5B","reason":"Resitting exam in August","date":"15/05/2026","recordedMonth":4,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"5A"},{"type":"withdrawal","wdStatus":"Completed","clientId":"xxx","year":2025,"country":"Borneo","cycle":3,"length":"5w","reason":"She is put down as a Teacher - waiting on CRM to remove","date":"","recordedMonth":0,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229601","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Circumstances have changed — studies, work and preparing for university","date":"20/04/2026","recordedMonth":3,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"229524","year":2026,"country":"South Africa","cycle":1,"length":"5B","reason":"No reason given, followed up but no response","date":"03/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"229360","year":2026,"country":"Costa Rica","cycle":2,"length":"5w","reason":"No longer available (had deferred from 2025 already)","date":"27/03/2026","recordedMonth":2,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"229349","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Accepted into college","date":"18/08/2025","recordedMonth":7,"recordedYear":2025,"toYear":2026,"toCountry":"South Africa","toCycle":2,"toLength":"4B"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229349","year":2026,"country":"South Africa","cycle":2,"length":"4w","reason":"Personal reasons","date":"04/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"237884","year":2025,"country":"Borneo","cycle":3,"length":"10w","reason":"Needs more time to develop fundraising support","date":"16/09/2025","recordedMonth":8,"recordedYear":2025,"toYear":2026,"toCountry":"Borneo","toCycle":1,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"276075","year":2026,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Medical team advises against travel due to mental health","date":"03/06/2026","recordedMonth":5,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"275747","year":2026,"country":"Borneo","cycle":1,"length":"10w","reason":"Withdrew due to university opportunities","date":"20/01/2026","recordedMonth":0,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"284316","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Family relocating to Australia, clashes with Expedition","date":"24/04/2026","recordedMonth":3,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"255422","year":2026,"country":"South Africa","cycle":1,"length":"5A","reason":"Personal reasons","date":"03/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"279997","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Due to availability","date":"31/03/2026","recordedMonth":2,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229537","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"No response after multiple contact attempts","date":"","recordedMonth":0,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"253429","year":2026,"country":"Borneo","cycle":1,"length":"7A","reason":"Friend not medically cleared — wouldn't re-accept due to attitude and threat to sue","date":"12/08/2025","recordedMonth":7,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231829","year":2026,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Can't raise the funds","date":"17/03/2026","recordedMonth":2,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"281121","year":2026,"country":"South Africa","cycle":2,"length":"5w","reason":"Personal reasons","date":"04/02/2026","recordedMonth":1,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"269453","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Struggling to raise funds","date":"13/03/2026","recordedMonth":2,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"4A"},{"type":"deferral","wdStatus":"Completed","clientId":"269453","year":2026,"country":"Costa Rica","cycle":2,"length":"4A","reason":"Struggling to raise funds (second deferral)","date":"13/03/2026","recordedMonth":2,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"247796","year":2025,"country":"South Africa","cycle":3,"length":"7A","reason":"Forced withdrawal due to lack of comms","date":"29/09/2025","recordedMonth":8,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"282974","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Graduation date means he can't come for beginning of 10W","date":"17/03/2026","recordedMonth":2,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"7B"},{"type":"withdrawal","wdStatus":"Completed","clientId":"250661","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Just doesn't want to go anymore","date":"","recordedMonth":0,"recordedYear":2025},{"type":"deferral","wdStatus":"Completed","clientId":"284475","year":2026,"country":"Borneo","cycle":3,"length":"10w","reason":"Shortening cycle to afford next year South Africa","date":"08/04/2026","recordedMonth":3,"recordedYear":2026,"toYear":2026,"toCountry":"Borneo","toCycle":3,"toLength":"7w"},{"type":"deferral","wdStatus":"","clientId":"276488","year":2026,"country":"South Africa","cycle":2,"length":"10w","reason":"Just started new job and can't go this year","date":"07/04/2026","recordedMonth":3,"recordedYear":2026,"toYear":2027,"toCountry":"South Africa","toCycle":0,"toLength":"10w"},{"type":"deferral","wdStatus":"In Progress","clientId":"292002","year":2026,"country":"Borneo","cycle":3,"length":"10w","reason":"Thought the amount was Malaysian currency not dollars, so suspect financial concerns","date":"01/06/2026","recordedMonth":5,"recordedYear":2026,"toYear":2026,"toCountry":"Borneo","toCycle":3,"toLength":"4w"},{"type":"deferral","wdStatus":"Completed","clientId":"245794","year":2026,"country":"Costa Rica","cycle":3,"length":"7w","reason":"Personal reasons — deferred to earlier C2 instead","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":"7w"},{"type":"deferral","wdStatus":"Completed","clientId":"251674","year":2026,"country":"Costa Rica","cycle":1,"length":"7w","reason":"Personal reasons — extended to 10W C1","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"10w"},{"type":"deferral","wdStatus":"Completed","clientId":"255423","year":2026,"country":"Costa Rica","cycle":1,"length":"5w","reason":"No reason found — extended to 10W C1","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"256290","year":2026,"country":"Costa Rica","cycle":1,"length":"5w","reason":"Withdrew due to new medical issue — torn ACL","date":"","recordedMonth":0,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"257444","year":2026,"country":"Costa Rica","cycle":1,"length":"5w","reason":"Unable to get approved time off during university studies — changed to summer break instead","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":2,"toLength":""},{"type":"deferral","wdStatus":"Completed","clientId":"262575","year":2026,"country":"Costa Rica","cycle":1,"length":"7w","reason":"Changed from 7 to 5 weeks due to age demographic and to spend more time doing independent travel","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":1,"toLength":"5w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"290335","year":2026,"country":"South Africa","cycle":2,"length":"5w","reason":"Wants to travel further before doing Raleigh Expedition","date":"","recordedMonth":0,"recordedYear":2026},{"type":"withdrawal","wdStatus":"","clientId":"229397","year":0,"country":"","cycle":0,"length":"","reason":"NOTE: Believed to originate from HubSpot — details not available in FileMaker. Reason, expedition details and date of change to be confirmed.","date":"","recordedMonth":0,"recordedYear":0},{"type":"deferral","wdStatus":"Completed","clientId":"271720","year":2026,"country":"Costa Rica","cycle":3,"length":"5w","reason":"Family illness — unable to leave the country at the moment","date":"21/07/2026","recordedMonth":6,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":1,"toLength":"5w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"238537","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Personal reasons","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"276488","year":2027,"country":"South Africa","cycle":2,"length":"10w","reason":"Personal reasons","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"290123","year":2026,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Medical conditions meant health didn't allow time to prepare, and still having ongoing tests","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"279110","year":2026,"country":"Borneo","cycle":3,"length":"10w","reason":"Moved from Borneo to Costa Rica as there were more people on the Costa Rica expedition","date":"21/07/2026","recordedMonth":6,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"246077","year":2026,"country":"Costa Rica","cycle":3,"length":"7w","reason":"Has now begun his studies and won't be available","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"296773","year":2027,"country":"Costa Rica","cycle":1,"length":"4A","reason":"Financial issues — unable to raise the money in time","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"283409","year":2027,"country":"South Africa","cycle":2,"length":"4w","reason":"Financial issues — unable to raise the money","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"291042","year":2026,"country":"Borneo","cycle":3,"length":"7w","reason":"Surgery postponed","date":"21/07/2026","recordedMonth":6,"recordedYear":2026,"toYear":2026,"toCountry":"Borneo","toCycle":1,"toLength":"5w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"297107","year":2026,"country":"Borneo","cycle":3,"length":"7w","reason":"Financial issues — unable to raise the money","date":"21/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"297465","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Needs to attend university interviews","date":"21/07/2026","recordedMonth":6,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"10w"},{"type":"deferral","wdStatus":"Completed","clientId":"297311","year":2026,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Wants to be home sooner to have more time before going to university","date":"21/07/2026","recordedMonth":6,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"7A"},{"type":"withdrawal","wdStatus":"Completed","clientId":"229379","year":2025,"country":"Borneo","cycle":1,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"227797","year":2025,"country":"Borneo","cycle":1,"length":"10w","reason":"Other — check FM/email","date":"11/03/2025","recordedMonth":2,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229557","year":2025,"country":"Borneo","cycle":3,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229507","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229421","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229450","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229628","year":2025,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229562","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229957","year":2025,"country":"Costa Rica","cycle":2,"length":"7w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229362","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231825","year":2025,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Other — check FM/email","date":"10/03/2025","recordedMonth":2,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231815","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"10/03/2025","recordedMonth":2,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"232034","year":2025,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"19/03/2025","recordedMonth":2,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229355","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229830","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229621","year":2025,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229354","year":2025,"country":"South Africa","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229352","year":2025,"country":"South Africa","cycle":2,"length":"7w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229368","year":2025,"country":"South Africa","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229389","year":2025,"country":"South Africa","cycle":2,"length":"7w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229946","year":2025,"country":"South Africa","cycle":2,"length":"10w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229377","year":2025,"country":"South Africa","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229610","year":2025,"country":"South Africa","cycle":2,"length":"5w","reason":"Other — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231828","year":2025,"country":"South Africa","cycle":2,"length":"7w","reason":"Other — check FM/email","date":"10/03/2025","recordedMonth":2,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"237887","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Other — check FM/email","date":"14/04/2025","recordedMonth":3,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"237888","year":2025,"country":"South Africa","cycle":3,"length":"10w","reason":"Other — check FM/email","date":"14/04/2025","recordedMonth":3,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"238143","year":2026,"country":"Borneo","cycle":1,"length":"7w","reason":"Reason to be confirmed — check FM/email","date":"30/04/2025","recordedMonth":3,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229462","year":2026,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"02/06/2025","recordedMonth":5,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229859","year":2026,"country":"Costa Rica","cycle":2,"length":"5w","reason":"Reason to be confirmed — check FM/email","date":"03/04/2025","recordedMonth":3,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"229369","year":2026,"country":"South Africa","cycle":1,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"21/02/2025","recordedMonth":1,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"231819","year":2026,"country":"South Africa","cycle":1,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"09/04/2025","recordedMonth":3,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"274387","year":2026,"country":"South Africa","cycle":1,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"15/12/2025","recordedMonth":11,"recordedYear":2025},{"type":"withdrawal","wdStatus":"Completed","clientId":"297159","year":2027,"country":"South Africa","cycle":1,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"31/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"297162","year":2027,"country":"South Africa","cycle":1,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"31/07/2026","recordedMonth":6,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"232094","year":2026,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Reason to be confirmed — check FM/email","date":"","recordedMonth":0,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"232069","year":2027,"country":"Borneo","cycle":1,"length":"10w","reason":"Personal reasons","date":"02/10/2026","recordedMonth":9,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"296513","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Personal reasons","date":"01/10/2026","recordedMonth":9,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"280882","year":2026,"country":"Costa Rica","cycle":3,"length":"10w","reason":"Existing medical condition","date":"29/09/2026","recordedMonth":8,"recordedYear":2026,"toYear":2026,"toCountry":"Costa Rica","toCycle":3,"toLength":"10w"},{"type":"withdrawal","wdStatus":"Completed","clientId":"291518","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Personal reasons","date":"01/10/2026","recordedMonth":9,"recordedYear":2026},{"type":"withdrawal","wdStatus":"Completed","clientId":"298709","year":2027,"country":"Costa Rica","cycle":1,"length":"10w","reason":"Personal reasons","date":"29/09/2026","recordedMonth":8,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"300079","year":2027,"country":"Costa Rica","cycle":2,"length":"4B","reason":"Product change","date":"28/10/2026","recordedMonth":9,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"4B"},{"type":"deferral","wdStatus":"Completed","clientId":"296214","year":2027,"country":"Costa Rica","cycle":3,"length":"5A","reason":"Product change — wanting to do Expedition earlier","date":"28/10/2026","recordedMonth":9,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"4A"},{"type":"withdrawal","wdStatus":"Completed","clientId":"243475","year":2027,"country":"Costa Rica","cycle":2,"length":"5B","reason":"Product change","date":"28/10/2026","recordedMonth":9,"recordedYear":2026},{"type":"deferral","wdStatus":"Completed","clientId":"297465","year":2027,"country":"Costa Rica","cycle":2,"length":"10w","reason":"Product change","date":"28/10/2026","recordedMonth":9,"recordedYear":2026,"toYear":2027,"toCountry":"Costa Rica","toCycle":2,"toLength":"8w"}];
+// Merge offline data with user-added entries — version bumps never wipe user entries
+const WD_VERSION='v5';
+let WD_ENTRIES;
+(function(){
+  const stored=ls('raleigh_wd')||[];
+  // Build fingerprint set of all offline entries
+  const offlineKeys=new Set(WD_OFFLINE.map(e=>`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+  // User-added = anything in stored that isn't in the offline set
+  const userAdded=stored.filter(e=>!offlineKeys.has(`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+  // Always start from fresh offline copy, then append user entries
+  WD_ENTRIES=[...JSON.parse(JSON.stringify(WD_OFFLINE)),...userAdded];
+  try{localStorage.setItem('raleigh_wd',JSON.stringify(WD_ENTRIES));
+      localStorage.setItem('raleigh_wd_version',WD_VERSION);}catch(e){}
+})();
+let activeYear=2026;
+
+// ─── PARTNERS ─────────────────────────────────────────────────────────────────
+const DEFAULT_PARTNER_NAMES=['Kaya','Impact Gap','Raleigh Bermuda','SES Award Winners'];
+let PARTNER_ENTRIES=ls('raleigh_partners')||[];
+let PARTNER_NAMES=ls('raleigh_partner_names')||(()=>{ls('raleigh_partner_names',DEFAULT_PARTNER_NAMES);return[...DEFAULT_PARTNER_NAMES];})();
+
+function updatePtLength(){
+  const yr=document.getElementById('pt-year').value;
+  const cy=document.getElementById('pt-cycle').value;
+  const sel=document.getElementById('pt-length');
+  const cur=sel.value;
+  const valid=WTC[yr+'|'+cy]||['10w','7A','7B','5A','5B','4A','4B'];
+  sel.innerHTML=valid.map(wt=>`<option value="${wt}">${LM[wt]||wt}</option>`).join('');
+  if(valid.includes(cur))sel.value=cur;
+}
+
+function renderPartnerNamesList(){
+  const el=document.getElementById('partner-names-list');
+  if(!el)return;
+  el.innerHTML=PARTNER_NAMES.map((n,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--tll);border:1px solid var(--tlm);border-radius:20px;padding:4px 10px;font-size:.78rem;font-weight:600;color:var(--dg)">${n}<button onclick="delPartnerName(${i})" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:.85rem;padding:0 2px;line-height:1" title="Remove">×</button></span>`).join('');
+  // Also update the partner dropdown in add form
+  const ptSel=document.getElementById('pt-partner');
+  if(ptSel){ptSel.innerHTML=PARTNER_NAMES.map(n=>`<option value="${n}">${n}</option>`).join('');}
+}
+
+function addPartnerName(){
+  const inp=document.getElementById('new-partner-name');
+  const name=(inp.value||'').trim();
+  if(!name)return;
+  if(PARTNER_NAMES.includes(name)){toast('Already exists');return;}
+  PARTNER_NAMES.push(name);
+  ls('raleigh_partner_names',PARTNER_NAMES);
+  cloudSave('raleigh_partner_names',PARTNER_NAMES);
+  inp.value='';
+  renderPartnerNamesList();
+}
+
+function delPartnerName(i){
+  if(!confirm(`Remove "${PARTNER_NAMES[i]}" from partner list?`))return;
+  PARTNER_NAMES.splice(i,1);
+  ls('raleigh_partner_names',PARTNER_NAMES);
+  cloudSave('raleigh_partner_names',PARTNER_NAMES);
+  renderPartnerNamesList();
+  renderPartners();
+}
+
+function addPartnerEntry(){
+  const clientId=(document.getElementById('pt-clientid').value||'').trim();
+  if(!clientId){toast('Client ID required');return;}
+  const yr=+document.getElementById('pt-year').value;
+  const cy=+document.getElementById('pt-cycle').value;
+  const length=document.getElementById('pt-length').value;
+  const country=document.getElementById('pt-country').value;
+  const partner=document.getElementById('pt-partner').value;
+  PARTNER_ENTRIES.push({clientId,year:yr,cycle:cy,length,country,partner,added:Date.now()});
+  ls('raleigh_partners',PARTNER_ENTRIES);
+  cloudSave('raleigh_partners',PARTNER_ENTRIES);
+  document.getElementById('pt-clientid').value='';
+  toast('Partner sign-up added ✓');
+  renderPartners();
+}
+
+function delPartnerEntry(i){
+  if(!confirm('Delete this partner sign-up?'))return;
+  PARTNER_ENTRIES.splice(i,1);
+  ls('raleigh_partners',PARTNER_ENTRIES);
+  cloudSave('raleigh_partners',PARTNER_ENTRIES);
+  renderPartners();
+}
+
+const DEST_LABEL={CR:'Costa Rica',SA:'South Africa',BN:'Borneo'};
+
+function renderPartners(){
+  renderPartnerNamesList();
+  updatePtLength();
+  const wrap=document.getElementById('partner-table-wrap');
+  if(!wrap)return;
+  if(!PARTNER_ENTRIES.length){
+    wrap.innerHTML='<p style="color:var(--tt);font-size:.82rem;padding:20px;text-align:center">No partner sign-ups recorded yet.</p>';
+    return;
+  }
+  // Group by year → cycle
+  const groups={};
+  PARTNER_ENTRIES.forEach((e,idx)=>{
+    const k=`${e.year}|${e.cycle}`;
+    if(!groups[k])groups[k]={year:e.year,cycle:e.cycle,entries:[]};
+    groups[k].entries.push({...e,_idx:idx});
+  });
+  const sorted=Object.values(groups).sort((a,b)=>a.year!==b.year?a.year-b.year:a.cycle-b.cycle);
+  wrap.innerHTML=sorted.map(g=>{
+    const rows=g.entries.map(e=>`<tr>
+      <td>${e.clientId}</td>
+      <td style="text-align:center">${LM[e.length]||e.length}</td>
+      <td style="text-align:center">${DEST_LABEL[e.country]||e.country}</td>
+      <td style="text-align:center">${e.partner}</td>
+      <td style="text-align:center"><button onclick="delPartnerEntry(${e._idx})" class="btn btn-sm" style="background:#fff;border:1.5px solid var(--re);color:var(--re);padding:3px 8px;font-size:.72rem">Delete</button></td>
+    </tr>`).join('');
+    return`<div class="rs" style="margin-bottom:14px">
+      <div class="ch">${g.year} – Cycle ${g.cycle} <span style="font-weight:400;font-size:.78rem;opacity:.8">(${g.entries.length} sign-up${g.entries.length!==1?'s':''})</span></div>
+      <table><thead><tr><th>Client ID</th><th>Length</th><th>Country</th><th>Partner</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }).join('');
+}
+
+// ─── SHARED ONLINE STORAGE (Firebase Realtime DB) ────────────────────────────
+// Set your Firebase URL here after creating a free project at console.firebase.google.com
+// Format: https://your-project-default-rtdb.firebaseio.com
+const FIREBASE_URL = 'https://sales-number-dashboard-default-rtdb.firebaseio.com';  // Firebase Realtime DB
+
+async function cloudSave(key, data){
+  if(!FIREBASE_URL) return;
+  try{
+    await fetch(`${FIREBASE_URL}/${key}.json`,{
+      method:'PUT',
+      body:JSON.stringify(data),
+      headers:{'Content-Type':'application/json'}
+    });
+  }catch(e){ console.warn('Cloud save failed:',e); }
+}
+
+async function cloudLoad(key){
+  if(!FIREBASE_URL) return null;
+  try{
+    const r=await fetch(`${FIREBASE_URL}/${key}.json`);
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+// Merge local WD_ENTRIES with cloud copy so no one's additions get overwritten
+async function mergeWDToCloud(){
+  const cloudWD = await cloudLoad('raleigh_wd');
+  if(cloudWD && Array.isArray(cloudWD) && cloudWD.length){
+    const offlineKeys=new Set(WD_OFFLINE.map(e=>`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+    // User-added entries from cloud that aren't in local
+    const cloudUserAdded=cloudWD.filter(e=>!offlineKeys.has(`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+    const localUserAdded=WD_ENTRIES.filter(e=>!offlineKeys.has(`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+    // Merge: start from local, add any cloud entries whose clientId isn't already local
+    const localIds=new Set(localUserAdded.map(e=>String(e.clientId||'').trim()));
+    const newFromCloud=cloudUserAdded.filter(e=>!localIds.has(String(e.clientId||'').trim()));
+    if(newFromCloud.length){
+      WD_ENTRIES=[...JSON.parse(JSON.stringify(WD_OFFLINE)),...localUserAdded,...newFromCloud];
+      ls('raleigh_wd',WD_ENTRIES);
+      renderWD();
+    }
+  }
+  return cloudSave('raleigh_wd', WD_ENTRIES);
+}
+
+async function syncAllToCloud(){
+  if(!FIREBASE_URL) return;
+  await Promise.all([
+    cloudSave('raleigh_counts', currentCounts),
+    cloudSave('raleigh_nationals', NATIONALS),
+    cloudSave('raleigh_extensions', EXTENSIONS),
+    mergeWDToCloud(),
+    cloudSave('raleigh_wd_reasons', WD_REASONS),
+    cloudSave('raleigh_legacy_counts', window._legacyCounts||{}),
+    cloudSave('raleigh_discrepancies', window._lastDiscrepancies||[]),
+    cloudSave('raleigh_lastUpdated', document.getElementById('last-updated').textContent),
+    cloudSave('raleigh_partners', PARTNER_ENTRIES),
+    cloudSave('raleigh_partner_names', PARTNER_NAMES),
+  ]);
+  toast('Saved to cloud ✓');
+}
+
+async function loadFromCloud(){
+  if(!FIREBASE_URL) return false;
+  try{
+    const [counts, nats, exts, wd, wdReasons, legacyCounts, discrepancies, lu, partners, partnerNames] = await Promise.all([
+      cloudLoad('raleigh_counts'),
+      cloudLoad('raleigh_nationals'),
+      cloudLoad('raleigh_extensions'),
+      cloudLoad('raleigh_wd'),
+      cloudLoad('raleigh_wd_reasons'),
+      cloudLoad('raleigh_legacy_counts'),
+      cloudLoad('raleigh_discrepancies'),
+      cloudLoad('raleigh_lastUpdated'),
+      cloudLoad('raleigh_partners'),
+      cloudLoad('raleigh_partner_names'),
+    ]);
+    if(counts){ currentCounts=counts; ls('raleigh_counts',counts); }
+    if(nats && Object.keys(nats).length){ NATIONALS=nats; ls('raleigh_nationals',nats); }
+    if(exts && exts.length){ EXTENSIONS=exts; ls('raleigh_extensions',exts); }
+    if(wd && wd.length){
+      // Apply same merge logic as startup — offline entries always take precedence, user-added are preserved
+      const offlineKeys=new Set(WD_OFFLINE.map(e=>`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+      const userAdded=wd.filter(e=>!offlineKeys.has(`${e.clientId}|${e.date}|${e.type}|${e.reason}`));
+      WD_ENTRIES=[...JSON.parse(JSON.stringify(WD_OFFLINE)),...userAdded];
+      ls('raleigh_wd',WD_ENTRIES); ls('raleigh_wd_version',WD_VERSION);
+    }
+    if(wdReasons && wdReasons.length){ WD_REASONS=wdReasons; ls('raleigh_wd_reasons',wdReasons); renderWDReasons(); }
+    if(legacyCounts && Object.keys(legacyCounts).length){ window._legacyCounts=legacyCounts; ls('raleigh_legacy_counts',legacyCounts); renderLegacy(); }
+    if(discrepancies !== null){ window._lastDiscrepancies=discrepancies||[]; showDisc(discrepancies||[]); }
+    if(lu){ document.getElementById('last-updated').textContent=lu; }
+    if(partners && Array.isArray(partners)){ PARTNER_ENTRIES=partners; ls('raleigh_partners',partners); }
+    if(partnerNames && Array.isArray(partnerNames) && partnerNames.length){ PARTNER_NAMES=partnerNames; ls('raleigh_partner_names',partnerNames); }
+    return true;
+  }catch(e){ console.warn('Cloud load failed:',e); return false; }
+}
+
+function saveState(){ls('raleigh_nationals',NATIONALS);ls('raleigh_cb',CB);ls('raleigh_counts',currentCounts);ls('raleigh_extensions',EXTENSIONS);ls('raleigh_wd',WD_ENTRIES);ls('raleigh_wd_version',WD_VERSION);}
+
+function postExp(year,cy,dest,wt){
+  const key=`${year}|${cy}|${dest}|${wt}`;
+  const net=(currentCounts[key]||0)-(NATIONALS[key]||0);
+  const dep=EXTENSIONS.filter(e=>e.year===year&&e.cycle===cy&&e.dest===dest&&e.fromWt===wt).length;
+  const arr=EXTENSIONS.filter(e=>e.year===year&&e.cycle===cy&&e.dest===dest&&e.toWt===wt).length;
+  return net-dep+arr;
+}
+
+// ─── DATE UTILS ───────────────────────────────────────────────────────────────
+function parseDate(val){
+  if(val===null||val===undefined||val==='') return null;
+  // JS Date object — SheetJS creates these at LOCAL midnight
+  // Must use local time methods (getFullYear/Month/Date) not UTC,
+  // otherwise UTC+2 (SA) shifts Feb 10 local → Feb 9 UTC → wrong date
+  if(val instanceof Date){
+    if(isNaN(val.getTime()))return null;
+    return{year:val.getFullYear(),month:val.getMonth()+1,day:val.getDate()};
+  }
+  // Excel serial number (numeric date without cellDates conversion)
+  if(typeof val==='number'){
+    if(val<1||val>100000)return null;
+    const ms=(val-25569)*86400000;
+    const d=new Date(ms);
+    return{year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate()};
+  }
+  // String fallback — try ISO first, then DD/MM/YYYY, then numeric string
+  if(typeof val==='string'){
+    const iso=val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso)return{year:+iso[1],month:+iso[2],day:+iso[3]};
+    // DD/MM/YYYY — only treat as DD/MM if first part > 12 (unambiguously a day)
+    // or if second part > 12 (unambiguously a month) — otherwise default to DD/MM (UK)
+    const pts=val.split('/');
+    if(pts.length===3&&pts[2].length===4){
+      const a=+pts[0],b=+pts[1],y=+pts[2];
+      if(y>2000&&b>=1&&b<=12&&a>=1&&a<=31)return{year:y,month:b,day:a}; // DD/MM/YYYY
+    }
+    const num=parseFloat(val);
+    if(!isNaN(num)&&num>1000){const ms=(num-25569)*86400000;const d=new Date(ms);return{year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate()};}
+  }
+  return null;
+}
+function ymdN(y){return y?y.year*10000+y.month*100+y.day:0;}
+function nStr(n){const y=Math.floor(n/10000),m=Math.floor((n%10000)/100),d=n%100;return`${String(d).padStart(2,'0')} ${MNS[m-1]} ${y}`;}
+function ymdS(y){return y?`${String(y.day).padStart(2,'0')} ${MNS[y.month-1]} ${y.year}`:'?';}
+function numToDateInput(n){const y=Math.floor(n/10000),m=String(Math.floor((n%10000)/100)).padStart(2,'0'),d=String(n%100).padStart(2,'0');return`${y}-${m}-${d}`;}
+function dateInputToNum(s){const p=s.split('-');return +p[0]*10000+ +p[1]*100+ +p[2];}
+
+// ─── WEEK TYPE ────────────────────────────────────────────────────────────────
+function identifyWT(sN,eN,year,cycle,dest){
+  const dk=DK[dest];if(!dk)return null;
+  const bounds=((CB[year]||{})[cycle]||{})[dk];if(!bounds)return null;
+  // Exact match only — no tolerance, no fallback
+  for(const[wt,[s,e]] of Object.entries(bounds)){if(sN===s&&eN===e)return wt;}
+  return null;
+}
+
+// ─── FILE HANDLER ─────────────────────────────────────────────────────────────
+function handleFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      // Read the sheet twice:
+      // Pass 1 — cellDates:true  → SheetJS converts date cells to JS Date objects
+      // Pass 2 — cellDates:false → date cells stay as raw Excel serial numbers
+      // We try both and pick whichever gives a valid year
+      const wb1=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+      const wb2=XLSX.read(e.target.result,{type:'binary',cellDates:false});
+      const ws1=wb1.Sheets[wb1.SheetNames[0]];
+      const ws2=wb2.Sheets[wb2.SheetNames[0]];
+      const d1=XLSX.utils.sheet_to_json(ws1,{raw:true,cellDates:true,defval:''});
+      const d2=XLSX.utils.sheet_to_json(ws2,{raw:true,defval:''});
+      if(!d1.length){showS('No data found in file.','error');return;}
+
+      const cols=Object.keys(d1[0]);
+      const fc=keys=>cols.find(col=>keys.some(k=>col.toLowerCase().includes(k.toLowerCase())))||null;
+      const PC=fc(['Product_Name']);
+      const SC=fc(['Grouping_SKU']);
+      const DC=fc(['Destination_Name']);
+      const STC=fc(['Date_Start']);
+      const ENC=fc(['Date_End']);
+      const STATC=fc(['Status_Type','Status']);
+      const INVC=fc(['Invoice_Type','Invoice']);
+      const CIDC=fc(['TBL_Client::_pkClient_ID','_pkClient_ID','Client_ID','ClientID']);
+      const CANC=fc(['BRM_MI_Flag_Cancellation','Flag_Cancellation','Cancellation']);
+
+      if(!STC||!ENC){
+        showS('Cannot find date columns in this file. Columns found: '+cols.filter(x=>x&&!x.startsWith('Unnamed')).join(', '),'error');
+        return;
+      }
+
+      // Try parsing a date using both reads as fallback
+      function smartDate(i, col){
+        const v1=d1[i]?.[col], v2=d2[i]?.[col];
+        // Try primary (cellDates version) first
+        let r=parseDate(v1);
+        if(r&&r.year>=2020&&r.year<=2032)return r;
+        // Try raw serial version
+        r=parseDate(v2);
+        if(r&&r.year>=2020&&r.year<=2032)return r;
+        // If v1 is a string that looks like M/D/YYYY (US format), try reading as MM/DD/YYYY
+        if(typeof v1==='string'){
+          const pts=v1.split('/');
+          if(pts.length===3){
+            const m=+pts[0],d=+pts[1],y=+pts[2];
+            if(y>=2020&&y<=2032&&m>=1&&m<=12&&d>=1&&d<=31)
+              return{year:y,month:m,day:d};
+          }
+        }
+        return null;
+      }
+
+      const rows=d1.map((r,i)=>({
+        product: String(r[PC]||''),
+        sku:     String(r[SC]||''),
+        dest:    String(r[DC]||''),
+        startYMD:smartDate(i,STC),
+        endYMD:  smartDate(i,ENC),
+        status:  String(r[STATC]||''),
+        invoice: String(r[INVC]||''),
+        clientId: CIDC?String(r[CIDC]||'').trim():'',
+        cancelFlag: CANC?String(r[CANC]||'').trim():'',
+      }));
+
+      const counts={}, legacyCounts={};
+      rows.forEach(row=>{
+        const s=row.startYMD,en=row.endYMD;
+        if(!s||!en)return;
+        const yr=s.year;if(yr!==2026&&yr!==2027&&yr!==2028)return;
+        if(!row.dest)return;
+
+        // Ignore test profiles silently
+        if(/\btest\b/i.test(row.sku)||(/test/i.test(row.product)&&/legacy/i.test(row.product)))return;
+
+        // Ignore "Not traveling" entirely — no count, no flag, no W&D entry
+        if(/not.?travel/i.test(String(row.status||'')))return;
+
+        // Legacy rows: count separately, bypass duration & date matching
+        if(/legacy/i.test(row.sku)){
+          // Still apply status check for Legacy — only Confirmed/Pending/Reserved-Group
+          const lstatus=String(row.status||'').trim();
+          const linvoice=String(row.invoice||'').trim();
+          if(lstatus==='Reserved'&&linvoice.toLowerCase()!=='group')return;
+          if(lstatus!==''&&lstatus!=='Confirmed'&&lstatus!=='Pending'&&lstatus!=='Reserved')return;
+          const m=s.month,cycle=m<=5?1:m<=9?2:3;
+          legacyCounts[`${yr}|${cycle}|${row.dest}`]=(legacyCounts[`${yr}|${cycle}|${row.dest}`]||0)+1;
+          return;
+        }
+
+        if(!en)return;
+        const sDate=new Date(Date.UTC(s.year,s.month-1,s.day));
+        const eDate=new Date(Date.UTC(en.year,en.month-1,en.day));
+        const days=Math.round((eDate-sDate)/86400000);
+        if(days<24)return;
+        if(/\b[1236]\s*w(ee)?k/i.test(row.product))return;
+        if(/\bextensions?\b/i.test(row.product)||/\bextensions?\b/i.test(row.sku))return;
+        // Status filter: count Confirmed + Pending always; Reserved only if Group invoice
+        const status=String(row.status||'').trim();
+        const invoice=String(row.invoice||'').trim();
+        if(status==='Reserved'&&invoice.toLowerCase()!=='group')return;
+        if(status!==''&&status!=='Confirmed'&&status!=='Pending'&&status!=='Reserved')return;
+        const m=s.month,cycle=m<=5?1:m<=9?2:3;
+        const wt=identifyWT(ymdN(s),ymdN(en),yr,cycle,row.dest);
+        if(!wt)return;
+        const key=`${yr}|${cycle}|${row.dest}|${wt}`;
+        counts[key]=(counts[key]||0)+1;
+      });
+
+      currentCounts=counts;
+      window._legacyCounts=legacyCounts;
+      ls('raleigh_legacy_counts',legacyCounts);
+      const issues=checkDisc(rows);
+      window._lastDiscrepancies=issues;
+      showDisc(issues);
+      if(issues.length) cloudSave('raleigh_discrepancies', issues);
+      const wdFlagIssues=checkWDFlags(rows);
+      showWDFlags(wdFlagIssues);
+      const total=Object.values(counts).reduce((a,b)=>a+b,0);
+      const y26=rows.filter(r=>r.startYMD?.year===2026).length;
+      const y27=rows.filter(r=>r.startYMD?.year===2027).length;
+      const y28=rows.filter(r=>r.startYMD?.year===2028).length;
+      const noDate=rows.filter(r=>!r.startYMD).length;
+      showS(`✅ ${d1.length} rows — ${total} venturers counted (${y26} in 2026, ${y27} in 2027, ${y28} in 2028)${noDate?` · ⚠️ ${noDate} rows had unreadable dates`:''}${issues.length?` · ⚠️ ${issues.length} discrepancies`:''}`, 'ok');
+      const now=new Date();
+      const lu=`Updated: ${now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} ${now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
+      document.getElementById('last-updated').textContent=lu;
+      ls('raleigh_lastUpdated',lu);
+      saveState();
+      syncAllToCloud();
+      renderAll();
+      renderLegacy();
+    }catch(err){showS('Error reading file: '+err.message,'error');console.error(err);}
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ─── DISCREPANCIES ────────────────────────────────────────────────────────────
+function checkDisc(rows){
+  const issues=[];
+  rows.forEach((row,i)=>{
+    // Silently skip 2/3 week product names, test profiles, and "Not traveling" rows
+    if(/\b[23]\s*w(ee)?k/i.test(row.product))return;
+    if(/\bextensions?\b/i.test(row.product)||/\bextensions?\b/i.test(row.sku))return;
+    if(/\btest\b/i.test(row.sku)||(/test/i.test(row.product)&&/legacy/i.test(row.product)))return;
+    if(/not.?travel/i.test(String(row.status||'')))return;
+    if(!row.startYMD)return;
+    const probs=[],name=row.product,dest=row.dest,yr=row.startYMD?.year||0,m=row.startYMD?.month||0,cycle=m<=5?1:m<=9?2:3;
+    const lyM=name.match(/20(2[4-9])/);const lY=lyM?parseInt('20'+lyM[1]):null;
+    const skM=row.sku.match(/Cycle\s*(\d)/i);const lC=skM?parseInt(skM[1]):null;
+    if(lC&&lC!==cycle)probs.push(`Cycle mismatch — name says C${lC}, start date says C${cycle}`);
+    if(lY&&lY!==yr)probs.push(`Year mismatch — name says ${lY}, start date says ${yr}`);
+    if(dest.toLowerCase().includes('borneo')&&cycle===2)probs.push('Borneo has no Cycle 2 — start date falls in Jun–Sep');
+    let din='';
+    if(name.toLowerCase().includes('costa rica'))din='Costa Rica';
+    else if(name.toLowerCase().includes('south africa'))din='South Africa';
+    else if(name.toLowerCase().includes('borneo'))din='Borneo';
+    if(din&&din!==dest)probs.push(`Destination mismatch — name says '${din}', field says '${dest}'`);
+        // Flag date mismatches ONLY for Confirmed/Pending rows, and NOT for C1 2026
+    const rowStatus=String(row.status||'').trim();
+    const skipDateCheck=(row.startYMD&&row.startYMD.year===2026&&row.startYMD.month<=5);
+    if(!probs.length&&row.startYMD&&row.endYMD&&!skipDateCheck&&(rowStatus===''||rowStatus==='Confirmed'||rowStatus==='Pending')){
+      const yr2=row.startYMD.year,m2=row.startYMD.month,cycle2=m2<=5?1:m2<=9?2:3;
+      if((yr2===2026||yr2===2027||yr2===2028)&&dest){
+        const sDate2=new Date(Date.UTC(row.startYMD.year,row.startYMD.month-1,row.startYMD.day));
+        const eDate2=new Date(Date.UTC(row.endYMD.year,row.endYMD.month-1,row.endYMD.day));
+        const approxDays=Math.round((eDate2-sDate2)/86400000);
+        if(approxDays>=24){
+          const wt=identifyWT(ymdN(row.startYMD),ymdN(row.endYMD),yr2,cycle2,dest);
+          if(!wt)probs.push(`Dates don't match any known week type exactly — ${ymdS(row.startYMD)} to ${ymdS(row.endYMD)} (${approxDays} days).`);
+        }
+      }
+    }
+        if(probs.length)issues.push({rowNum:i+2,product:name,dest,startStr:ymdS(row.startYMD),probs});
+  });
+  return issues;
+}
+
+
+// ─── W&D AUTO-FLAGGING ────────────────────────────────────────────────────────
+function checkWDFlags(rows){
+  // NTU is intentionally excluded — only Cancelled and Deferred are flagged
+  const FLAG_STATUSES=/^(cancelled|deferred)$/i;
+  // IDs that should never be flagged (known exclusions)
+  const EXCLUDED_IDS=new Set(['290985','264321','232094']);
+  // Build set of clientIds already in WD tracker
+  const knownIds=new Set(WD_ENTRIES.map(e=>String(e.clientId||'').trim()).filter(Boolean));
+  // Build set of clientIds tracked as extensions
+  const extIds=new Set((EXTENSIONS||[]).map(e=>String(e.clientId||e.id||e||'').trim()).filter(Boolean));
+  // Pre-seed known extension IDs
+  ['264321','290985'].forEach(id=>extIds.add(id));
+  const flagged=[];
+  rows.forEach(row=>{
+    const st=String(row.status||'').trim();
+    if(!FLAG_STATUSES.test(st))return;
+    const cid=String(row.clientId||'').trim();
+    if(!cid||cid==='xxx'||cid.toLowerCase()==='xxx')return;
+    if(EXCLUDED_IDS.has(cid))return;
+    if(knownIds.has(cid))return;
+    const typeHint=/^cancelled$/i.test(st)?'Withdrawal?':'Deferral?';
+    const isExt=extIds.has(cid);
+    flagged.push({cid, dest:row.dest||'', status:st, typeHint,
+      sku:row.sku||'', product:row.product||'', isExt});
+    knownIds.add(cid); // deduplicate
+  });
+  return flagged;
+}
+
+function showWDFlags(flags){
+  const box=document.getElementById('wdfbox');
+  const list=document.getElementById('wdfbox-list');
+  if(!flags.length){box.classList.remove('show');list.innerHTML='';return;}
+  box.classList.add('show');
+  // Separate extension-linked and regular flags
+  const extFlags=flags.filter(f=>f.isExt);
+  const regFlags=flags.filter(f=>!f.isExt);
+  let html='';
+  if(extFlags.length){
+    html+=`<p style="font-size:.76rem;font-weight:700;color:#922b21;margin:4px 0 4px">🔴 Previous extensions — likely Deferral:</p>`;
+    html+=extFlags.map(f=>{
+      const cyM=f.sku.match(/Cycle\s*(\d)/i);const cy=cyM?'C'+cyM[1]:'';
+      const yrM=f.sku.match(/20(2[4-9])/);const yr=yrM?yrM[1]:'';
+      const label=`${f.dest||f.product||'Unknown'}${yr?' '+yr:''}${cy?' '+cy:''}`.trim();
+      return `<div class="wdfi" style="border-left-color:#c0392b;background:#fff0f0"><strong>${f.cid}</strong><span>${label}</span>`+
+        `<span class="wdfi-tag">${f.status}</span>`+
+        `<span class="wdfi-tag" style="background:#f9d6d5;color:#922b21;font-weight:800">⚠ Extension → Deferral</span></div>`;
+    }).join('');
+  }
+  if(regFlags.length){
+    if(extFlags.length)html+=`<p style="font-size:.76rem;font-weight:700;color:#922b21;margin:8px 0 4px">Other missing entries:</p>`;
+    html+=regFlags.map(f=>{
+      const cyM=f.sku.match(/Cycle\s*(\d)/i);const cy=cyM?'C'+cyM[1]:'';
+      const yrM=f.sku.match(/20(2[4-9])/);const yr=yrM?yrM[1]:'';
+      const label=`${f.dest||f.product||'Unknown'}${yr?' '+yr:''}${cy?' '+cy:''}`.trim();
+      return `<div class="wdfi"><strong>${f.cid}</strong><span>${label}</span>`+
+        `<span class="wdfi-tag">${f.status}</span><span class="wdfi-tag" style="background:#fdf4e7;color:#a04000">${f.typeHint}</span></div>`;
+    }).join('');
+  }
+  list.innerHTML=html;
+  box.querySelector('h3').firstChild.textContent=`🔴 ${flags.length} possible missing W&D entr${flags.length===1?'y':'ies'} — found in Master Doc but not in tracker  `;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderAll(){renderYear(2026);renderYear(2027);renderYear(2028);updateSum();}
+
+function renderYear(year){
+  const c=document.getElementById(`r${year}`);c.innerHTML='';
+  for(let cy=1;cy<=3;cy++){
+    const dests=DEST_ORDER.filter(d=>((CB[year]||{})[cy]||{})[DK[d]]);
+    if(!dests.length)continue;
+    const blk=document.createElement('div');
+    const ch=document.createElement('div');ch.className='ch';ch.textContent=CL[cy];blk.appendChild(ch);
+    dests.forEach(dest=>{
+      const dk=DK[dest];
+      const wtList=(WTC[`${year}|${cy}`]||[]).filter(w=>((CB[year][cy][dk])||{})[w]);
+      if(!wtList.length)return;
+      const dh=document.createElement('div');dh.className='dh';dh.textContent=dest;blk.appendChild(dh);
+      const tbl=document.createElement('table');
+      tbl.innerHTML='<thead><tr><th>Week Type</th><th>Dates</th><th>Venturers</th><th>Nationals</th><th>Pre-Exped.</th><th>Post Exped.</th></tr></thead>';
+      const tb=document.createElement('tbody');
+      let sv=0,sn=0;
+      wtList.forEach(wt=>{
+        const b=CB[year][cy][dk][wt],key=`${year}|${cy}|${dest}|${wt}`;
+        const cnt=currentCounts[key]||0,nat=NATIONALS[key]||0,net=cnt-nat;
+        sv+=cnt;sn+=nat;
+        const post=postExp(year,cy,dest,wt);
+        const tr=document.createElement('tr');if(cnt>0)tr.classList.add('hc');
+        tr.innerHTML=`<td>${LM[wt]||wt}</td><td style="color:var(--tm);font-weight:400">${nStr(b[0])} – ${nStr(b[1])}</td><td class="${cnt===0?'zv':''}">${cnt}</td><td class="${nat===0?'zv':''}">${nat}</td><td class="nc">${net}</td><td class="nc" style="font-weight:700">${post}</td>`;
+        tb.appendChild(tr);
+      });
+      const svPost=wtList.reduce((a,wt2)=>((CB[year][cy][dk])||{})[wt2]?a+postExp(year,cy,dest,wt2):a,0);
+      const tr=document.createElement('tr');tr.className='tr';
+      tr.innerHTML=`<td>TOTAL – ${dest}</td><td></td><td>${sv}</td><td>${sn}</td><td class="nc">${sv-sn}</td><td class="nc" style="font-weight:700">${svPost}</td>`;
+      tb.appendChild(tr);tbl.appendChild(tb);blk.appendChild(tbl);
+      // Copy button per destination — Net values only
+      const dcb=document.createElement('button');dcb.className='ccb';
+      dcb.textContent=`📋 Copy ${dest} (Pre & Post Exped.) to clipboard`;
+      const _year=year,_cy=cy,_dest=dest,_dk=dk,_wtList=wtList;
+      dcb.onclick=()=>copyDestNet(_year,_cy,_dest,_dk,_wtList);
+      blk.appendChild(dcb);
+    });
+    c.appendChild(blk);
+  }
+}
+
+function updateSum(){
+  if(!Object.keys(currentCounts).length){document.getElementById('stext').textContent='Upload a file to see totals';return;}
+  const t26=Object.entries(currentCounts).filter(([k])=>k.startsWith('2026')).reduce((a,[,v])=>a+v,0);
+  const t27=Object.entries(currentCounts).filter(([k])=>k.startsWith('2027')).reduce((a,[,v])=>a+v,0);
+  const t28=Object.entries(currentCounts).filter(([k])=>k.startsWith('2028')).reduce((a,[,v])=>a+v,0);
+  document.getElementById('stext').textContent=`2026: ${t26} · 2027: ${t27} · 2028: ${t28} · Total: ${t26+t27+t28}`;
+}
+
+function switchYear(year,el){
+  activeYear=year;
+  document.querySelectorAll('.ytab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.getElementById('r2026').style.display=year===2026?'block':'none';
+  document.getElementById('r2027').style.display=year===2027?'block':'none';
+  document.getElementById('r2028').style.display=year===2028?'block':'none';
+}
+
+// ─── NATIONALS ────────────────────────────────────────────────────────────────
+function renderNats(){
+  const g=document.getElementById('ng');g.innerHTML='';
+  const es=Object.entries(NATIONALS);
+  if(!es.length){g.innerHTML='<p style="font-size:.78rem;color:var(--tt)">No nationals set.</p>';return;}
+  es.forEach(([key,val])=>{
+    const[yr,cy,dest,wt]=key.split('|');
+    const r=document.createElement('div');r.className='nr';
+    r.innerHTML=`<label>${yr} · C${cy} · ${dest} · ${LM[wt]||wt}</label><input type="number" min="0" value="${val}" onchange="updNat('${key}',this.value)"><button class="db" onclick="delNat('${key}')">✕</button>`;
+    g.appendChild(r);
+  });
+}
+function updNat(k,v){NATIONALS[k]=parseInt(v)||0;saveState();renderAll();}
+function delNat(k){delete NATIONALS[k];saveState();renderNats();renderAll();}
+function addNat(){
+  const k=`${document.getElementById('a-yr').value}|${document.getElementById('a-cy').value}|${document.getElementById('a-de').value}|${document.getElementById('a-wt').value}`;
+  NATIONALS[k]=parseInt(document.getElementById('a-cnt').value)||0;
+  saveState();renderNats();renderAll();toast('National added ✓');
+}
+
+// ─── EXTENSIONS ──────────────────────────────────────────────────────────────
+function renderExts(){
+  const el=document.getElementById('ext-list');
+  if(!EXTENSIONS.length){el.innerHTML='<p style="font-size:.78rem;color:var(--tt)">No extensions recorded yet.</p>';return;}
+  el.innerHTML='';
+  EXTENSIONS.forEach((e,i)=>{
+    const row=document.createElement('div');row.className='nr';
+    const cidBadge=e.clientId?`<span style="background:#e8f4fd;color:#1a6fa0;border-radius:4px;padding:1px 7px;font-size:.74rem;font-weight:700;margin-right:4px">${e.clientId}</span>`:'';
+    row.innerHTML=`<label style="font-size:.76rem">${cidBadge}${e.year} · C${e.cycle} · ${e.dest} &nbsp;|&nbsp; <strong>${LM[e.fromWt]||e.fromWt}</strong> &rarr; <strong>${LM[e.toWt]||e.toWt}</strong></label><button class="db" onclick="delExt(${i})" title="Remove">✕</button>`;
+    el.appendChild(row);
+  });
+}
+function addExt(){
+  const yr=+document.getElementById('e-yr').value;
+  const cy=+document.getElementById('e-cy').value;
+  const dest=document.getElementById('e-de').value;
+  const fromWt=document.getElementById('e-fr').value;
+  const toWt=document.getElementById('e-to').value;
+  const cid=(document.getElementById('e-cid')?document.getElementById('e-cid').value.trim():'');
+  if(fromWt===toWt){alert('From and To week types must be different.');return;}
+  EXTENSIONS.push({year:yr,cycle:cy,dest,fromWt,toWt,clientId:cid});
+  if(document.getElementById('e-cid'))document.getElementById('e-cid').value='';
+  saveState();renderExts();renderAll();toast('Extension added ✓');
+}
+function delExt(i){EXTENSIONS.splice(i,1);saveState();renderExts();renderAll();}
+
+// ─── DATE EDITOR ──────────────────────────────────────────────────────────────
+function renderDateEditor(){
+  const yr=+document.getElementById('de-yr').value;
+  const cy=+document.getElementById('de-cy').value;
+  const de=document.getElementById('de-de').value;
+  const grid=document.getElementById('de-grid');
+  grid.innerHTML='';
+  const dests=de==='all'?DEST_ORDER:[de];
+  dests.forEach(dest=>{
+    const dk=DK[dest];
+    const bounds=((CB[yr]||{})[cy]||{})[dk];
+    if(!bounds)return;
+    const wtList=(WTC[`${yr}|${cy}`]||[]).filter(w=>bounds[w]);
+    wtList.forEach(wt=>{
+      const[s,e]=bounds[wt];
+      const row=document.createElement('div');row.className='de-row';
+      row.innerHTML=`<label>${dest} · ${LM[wt]||wt}</label>
+        <div class="de-inputs">
+          <input type="date" value="${numToDateInput(s)}" onchange="updateDate(${yr},${cy},'${dk}','${wt}',0,this.value)">
+          <span>→</span>
+          <input type="date" value="${numToDateInput(e)}" onchange="updateDate(${yr},${cy},'${dk}','${wt}',1,this.value)">
+        </div>`;
+      grid.appendChild(row);
+    });
+  });
+}
+
+function updateDate(yr,cy,dk,wt,idx,val){
+  if(!val)return;
+  const n=dateInputToNum(val);
+  CB[yr][cy][dk][wt][idx]=n;
+  saveState();renderAll();toast('Date updated ✓');
+}
+
+function resetDates(){
+  CB=JSON.parse(JSON.stringify(DEFAULT_CB));
+  saveState();renderAll();toast('Dates reset to defaults ✓');
+}
+
+// ─── COPY & DOWNLOAD ──────────────────────────────────────────────────────────
+function copyDestNet(year,cy,dest,dk,wtList){
+  const preLines=[], postLines=[];
+  wtList.forEach(wt=>{
+    const k=`${year}|${cy}|${dest}|${wt}`;
+    preLines.push((currentCounts[k]||0)-(NATIONALS[k]||0));
+    postLines.push(postExp(year,cy,dest,wt));
+  });
+  const text=preLines.map((v,i)=>`${v}	${postLines[i]}`).join('\n');
+  navigator.clipboard.writeText(text).then(()=>toast(`${dest} copied — paste into Excel!`));
+}
+
+function tableToText(year,cycle){
+  const dests=DEST_ORDER.filter(d=>((CB[year]||{})[cycle]||{})[DK[d]]);
+  const lines=[`${CL[cycle]} — ${year}`,'']; 
+  dests.forEach(dest=>{
+    const dk=DK[dest];
+    const wtList=(WTC[`${year}|${cycle}`]||[]).filter(w=>((CB[year][cycle][dk])||{})[w]);
+    if(!wtList.length)return;
+    lines.push(dest,['Week Type','Dates','Venturers','Nationals','Net'].join('\t'));
+    let sv=0,sn=0;
+    wtList.forEach(wt=>{
+      const b=CB[year][cycle][dk][wt],k=`${year}|${cycle}|${dest}|${wt}`;
+      const cnt=currentCounts[k]||0,nat=NATIONALS[k]||0;sv+=cnt;sn+=nat;
+      lines.push([LM[wt]||wt,`${nStr(b[0])} – ${nStr(b[1])}`,cnt,nat,cnt-nat].join('\t'));
+    });
+    lines.push([`TOTAL – ${dest}`,'',sv,sn,sv-sn].join('\t'),'');
+  });
+  return lines.join('\n');
+}
+// ─── W&D EXPORT FUNCTIONS ─────────────────────────────────────────────────────
+function exportWDExcel(){
+  const rows=[['Type','Status','Client ID','Exp. Year','Country','Cycle','Length','Reason','Recorded Date','To Year','To Country','To Cycle','To Length']];
+  WD_ENTRIES.forEach(e=>{
+    rows.push([
+      e.type==='withdrawal'?'Withdrawal':'Deferral',
+      e.wdStatus||'',e.clientId||'',e.year||'',e.country||'',
+      e.cycle?'C'+e.cycle:'',LM[e.length]||e.length||'',e.reason||'',e.date||'',
+      e.toYear||'',e.toCountry||'',e.toCycle?'C'+e.toCycle:'',LM[e.toLength]||e.toLength||'',
+    ]);
+  });
+  const wbOut=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:12},{wch:10},{wch:10},{wch:14},{wch:8},{wch:12},{wch:25},{wch:14},{wch:10},{wch:14},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wbOut,ws,'W&D Tracker');
+  XLSX.writeFile(wbOut,'Raleigh_WD_Tracker.xlsx');
+  toast('Excel downloaded!');
+}
+
+function copyWDFullTable(){
+  const lines=['Type	Status	Client ID	Exp. Year	Country	Cycle	Length	Reason	Recorded Date'];
+  WD_ENTRIES.forEach(e=>{
+    const isD=e.type==='deferral';
+    const to=isD?` → ${e.toYear||''} ${e.toCountry||''} C${e.toCycle||''} ${LM[e.toLength]||e.toLength||''}`:'';
+    lines.push(`${isD?'Deferral':'Withdrawal'}	${e.wdStatus||''}	${e.clientId||''}	${e.year||''}	${e.country||''}	C${e.cycle||''}	${LM[e.length]||e.length||''}	${e.reason||''}${to}	${e.date||''}`);
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>toast('Full W&D table copied!'));
+}
+
+function showWDChart(){
+  const area=document.getElementById('wd-chart-area');
+  if(area.style.display!=='none'){area.style.display='none';return;}
+  area.style.display='block';
+
+  // Build data: year × month × reason
+  const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const reasons=['Personal reasons','Financial reasons','School changes','New plans','New illness','Old illness flare-up','Other - check FM / Email'];
+  const COLOURS=['#085041','#1D9E75','#f5a623','#e74c3c','#2E6E8E','#7a9b93','#d0dcd8'];
+
+  // Group by recordedYear → month → reason counts
+  const years=[...new Set(WD_ENTRIES.map(e=>e.recordedYear||e.year||2026))].sort();
+  const byMonth={};
+  years.forEach(yr=>{
+    byMonth[yr]=Array(12).fill(null).map(()=>({w:0,d:0,reasons:{}}));
+    WD_ENTRIES.filter(e=>(e.recordedYear||e.year||2026)===yr).forEach(e=>{
+      const m=e.recordedMonth??0;
+      if(e.type==='withdrawal')byMonth[yr][m].w++;
+      else byMonth[yr][m].d++;
+      const r=e.reason||'Other - check FM / Email';
+      byMonth[yr][m].reasons[r]=(byMonth[yr][m].reasons[r]||0)+1;
+    });
+  });
+
+  // Find active months
+  const activeMths=Array(12).fill(false);
+  years.forEach(yr=>byMonth[yr].forEach((m,i)=>{if(m.w+m.d>0)activeMths[i]=true;}));
+  const mLabels=MONTHS_SHORT.filter((_,i)=>activeMths[i]);
+  const mIdxs=MONTHS_SHORT.map((_,i)=>i).filter(i=>activeMths[i]);
+
+  // Build SVG bar chart
+  const W=Math.min(900, area.clientWidth||800), H=340, PAD={t:30,r:20,b:60,l:40};
+  const cW=W-PAD.l-PAD.r, cH=H-PAD.t-PAD.b;
+  const grpW=cW/mLabels.length, barW=Math.min(20,grpW/(years.length+1));
+  const maxVal=Math.max(1,...years.flatMap(yr=>mIdxs.map(m=>byMonth[yr][m].w+byMonth[yr][m].d)));
+  const scaleY=v=>cH-(v/maxVal)*cH;
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:8px;background:white">`;
+  // Grid lines
+  [0,0.25,0.5,0.75,1].forEach(f=>{
+    const y=PAD.t+scaleY(f*maxVal);
+    svg+=`<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="#eee" stroke-width="1"/>`;
+    svg+=`<text x="${PAD.l-5}" y="${y+4}" text-anchor="end" font-size="9" fill="#999">${Math.round(f*maxVal)}</text>`;
+  });
+
+  // Bars
+  years.forEach((yr,yi)=>{
+    const clr=COLOURS[yi%COLOURS.length];
+    mIdxs.forEach((mIdx,mi)=>{
+      const total=byMonth[yr][mIdx].w+byMonth[yr][mIdx].d;
+      const x=PAD.l+mi*grpW+(yi-(years.length-1)/2)*barW+grpW/2-barW/2;
+      const bH=(total/maxVal)*cH;
+      const y=PAD.t+cH-bH;
+      if(total>0){
+        svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${bH.toFixed(1)}" fill="${clr}" rx="2"/>`;
+        svg+=`<text x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle" font-size="8" fill="${clr}">${total}</text>`;
+      }
+    });
+  });
+
+  // X axis labels
+  mIdxs.forEach((mIdx,mi)=>{
+    const x=PAD.l+mi*grpW+grpW/2;
+    svg+=`<text x="${x}" y="${PAD.t+cH+14}" text-anchor="middle" font-size="10" fill="#555">${MONTHS_SHORT[mIdx]}</text>`;
+  });
+
+  // Legend
+  years.forEach((yr,yi)=>{
+    const lx=PAD.l+yi*70;
+    svg+=`<rect x="${lx}" y="${H-18}" width="10" height="10" fill="${COLOURS[yi%COLOURS.length]}" rx="2"/>`;
+    svg+=`<text x="${lx+14}" y="${H-9}" font-size="10" fill="#333">${yr}</text>`;
+  });
+
+  svg+='</svg>';
+
+  // Reason breakdown table
+  let tbl=`<p style="font-size:.78rem;font-weight:700;color:var(--dg);margin:14px 0 8px">Breakdown by Reason</p>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+    <thead><tr><th style="text-align:left;padding:4px 8px;background:#f4f6f5;border-bottom:1.5px solid var(--gr)">Reason</th>`;
+  years.forEach(yr=>tbl+=`<th style="text-align:center;padding:4px 8px;background:#f4f6f5;border-bottom:1.5px solid var(--gr)">${yr}</th>`);
+  tbl+=`</tr></thead><tbody>`;
+  reasons.forEach(r=>{
+    const vals=years.map(yr=>WD_ENTRIES.filter(e=>(e.recordedYear||e.year||2026)===yr&&e.reason===r).length);
+    if(vals.some(v=>v>0)){
+      tbl+=`<tr><td style="padding:4px 8px;border-bottom:1px solid #eee">${r}</td>`;
+      vals.forEach(v=>tbl+=`<td style="text-align:center;padding:4px 8px;border-bottom:1px solid #eee;font-weight:${v>0?'600':'400'};color:${v>0?'var(--dg)':'#ccc'}">${v||'—'}</td>`);
+      tbl+=`</tr>`;
+    }
+  });
+  tbl+=`</tbody></table>`;
+
+  area.innerHTML=svg+tbl;
+}
+
+function copyYrSummary(btn){
+  const yr=btn.getAttribute('data-copy-yr');
+  const text=(window._yrCopy||{})[+yr]||'';
+  navigator.clipboard.writeText(text).then(()=>toast(yr+' summary copied!'));
+}
+function copyLegacy(){
+  navigator.clipboard.writeText(window._legacyCopyText||'').then(()=>toast('Legacy Pre & Post copied!'));
+}
+function copyBlock(year,cycle){navigator.clipboard.writeText(tableToText(year,cycle)).then(()=>toast('Copied — paste into Excel!'));}
+function copyAll(){let t=`RALEIGH INTERNATIONAL — ${activeYear} VENTURER SALES SUMMARY\n\n`;for(let c=1;c<=3;c++)t+=tableToText(activeYear,c)+'\n';navigator.clipboard.writeText(t).then(()=>toast('Full year copied!'));}
+function dlExcel(){
+  const year=activeYear;
+  const rows=[['RALEIGH INTERNATIONAL — '+year+' VENTURER SALES SUMMARY'],['Updated: '+new Date().toLocaleDateString('en-GB')],[]];
+  for(let cy=1;cy<=3;cy++){
+    const dests=DEST_ORDER.filter(d=>((CB[year]||{})[cy]||{})[DK[d]]);if(!dests.length)continue;
+    rows.push([CL[cy]],[]);
+    dests.forEach(dest=>{
+      const dk=DK[dest];
+      const wtList=(WTC[`${year}|${cy}`]||[]).filter(w=>((CB[year][cy][dk])||{})[w]);if(!wtList.length)return;
+      rows.push([dest],['Week Type','Dates','Venturers','Nationals','Net']);
+      let sv=0,sn=0;
+      wtList.forEach(wt=>{const b=CB[year][cy][dk][wt],k=`${year}|${cy}|${dest}|${wt}`;const cnt=currentCounts[k]||0,nat=NATIONALS[k]||0;sv+=cnt;sn+=nat;rows.push([LM[wt]||wt,`${nStr(b[0])} – ${nStr(b[1])}`,cnt,nat,cnt-nat]);});
+      rows.push([`TOTAL – ${dest}`,'',sv,sn,sv-sn],[]);
+    });
+  }
+  const wbOut=XLSX.utils.book_new(),wsh=XLSX.utils.aoa_to_sheet(rows);
+  wsh['!cols']=[{wch:22},{wch:28},{wch:12},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wbOut,wsh,`${year} Summary`);
+  XLSX.writeFile(wbOut,`Raleigh_Sales_${year}.xlsx`);
+  toast('Excel downloaded!');
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function tog(hid,bid){document.getElementById(hid).classList.toggle('open');document.getElementById(bid).classList.toggle('open');}
+function showS(msg,type){const b=document.getElementById('sbar');b.textContent=msg;b.className='sbar show'+(type?' '+type:'');}
+function showDisc(issues){
+  const box=document.getElementById('dbox'),list=document.getElementById('dlist');
+  if(!issues.length){
+    box.classList.remove('show');
+    // Clear from cloud too so other users stop seeing it
+    cloudSave('raleigh_discrepancies',[]);
+    window._lastDiscrepancies=[];
+    return;
+  }
+  box.classList.add('show');
+  list.innerHTML=issues.map(i=>`<div class="di"><strong>Row ${i.rowNum}: ${i.product} · ${i.dest} · ${i.startStr}</strong><br>${i.probs.map(p=>`⚠ ${p}`).join('<br>')}</div>`).join('');
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+
+// Drag & drop
+const zone=document.getElementById('upload-zone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.background='var(--tll)';});
+zone.addEventListener('dragleave',()=>{zone.style.background='';});
+zone.addEventListener('drop',e=>{e.preventDefault();zone.style.background='';const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+
+// ─── WITHDRAWAL & DEFERRAL ───────────────────────────────────────────────────
+const WD_REASONS_DEFAULT=['Personal reasons','Financial reasons','School changes','New plans','New illness','Old illness flare-up','Existing medical condition','Other - check FM / Email'];
+let WD_REASONS=ls('raleigh_wd_reasons')||[...WD_REASONS_DEFAULT];
+const WD_COLS={withdrawal:['Client ID','Country','Cycle','Length','Reason','Date Added'],deferral:['Client ID','From Country','From Cycle','From Length','To Country','To Cycle','To Length','Reason','Date Added']};
+
+function wdTypeChange(){
+  const t=document.querySelector('input[name="wdtype"]:checked').value;
+  document.getElementById('wd-deferral-extra').style.display=t==='deferral'?'block':'none';
+}
+
+function updateWDLength(yearId,cycleId,lengthId){
+  const yr=document.getElementById(yearId).value;
+  const cy=document.getElementById(cycleId).value;
+  const sel=document.getElementById(lengthId);
+  const cur=sel.value;
+  const valid=[...(WTC[yr+'|'+cy]||['10w','7A','7B','5A','5B','4A','4B']),'legacy'];
+  sel.innerHTML=valid.map(wt=>`<option value="${wt}">${LM[wt]||wt}</option>`).join('');
+  if(valid.includes(cur))sel.value=cur;
+}
+function addWD(){
+  const type=document.querySelector('input[name="wdtype"]:checked').value;
+  const cid=document.getElementById('wd-cid').value.trim();
+  if(!cid){alert('Please enter a Client ID.');return;}
+  const dateVal=(document.getElementById('wd-date')?document.getElementById('wd-date').value.trim():'');
+  const parts=(dateVal||'').split('/');
+  const now=new Date();
+  let rec_month=now.getMonth(), rec_year=now.getFullYear();
+  if(parts.length===3){try{rec_month=parseInt(parts[1])-1;rec_year=parseInt(parts[2]);}catch(e){}}
+  const entry={
+    type,
+    wdStatus:document.getElementById('wd-wdstatus').value,
+    clientId:cid,
+    year:+document.getElementById('wd-year').value,
+    country:document.getElementById('wd-country').value,
+    cycle:+document.getElementById('wd-cycle').value,
+    length:document.getElementById('wd-length').value,
+    reason:document.getElementById('wd-reason').value,
+    recordedMonth:rec_month,
+    recordedYear:rec_year,
+    date:dateVal,
+  };
+  if(type==='deferral'){
+    entry.toYear=+document.getElementById('wd-nyear').value;
+    entry.toCountry=document.getElementById('wd-ncountry').value;
+    entry.toCycle=+document.getElementById('wd-ncycle').value;
+    entry.toLength=document.getElementById('wd-nlength').value;
+  }
+  WD_ENTRIES.push(entry);
+  saveState();
+  cloudSave('raleigh_wd', WD_ENTRIES);
+  document.getElementById('wd-cid').value='';
+  if(document.getElementById('wd-date'))document.getElementById('wd-date').value='';
+  renderWD();
+  toast('Entry added \u2713');
+}
+
+function editWD(i){
+  const e=WD_ENTRIES[i];
+  // Set type radio
+  document.querySelectorAll('input[name="wdtype"]').forEach(r=>r.checked=r.value===e.type);
+  wdTypeChange();
+  // Fill fields
+  if(document.getElementById('wd-wdstatus'))document.getElementById('wd-wdstatus').value=e.wdStatus||'Completed';
+  document.getElementById('wd-cid').value=e.clientId||'';
+  if(document.getElementById('wd-year'))document.getElementById('wd-year').value=e.year||2026;
+  document.getElementById('wd-country').value=e.country||'Costa Rica';
+  document.getElementById('wd-cycle').value=e.cycle||1;
+  updateWDLength('wd-year','wd-cycle','wd-length');
+  document.getElementById('wd-length').value=e.length||'10w';
+  document.getElementById('wd-reason').value=e.reason||'Personal reasons';
+  // Set date field if it exists
+  const dateEl=document.getElementById('wd-date');
+  if(dateEl)dateEl.value=e.date||'';
+  // Deferral fields
+  if(e.type==='deferral'){
+    if(document.getElementById('wd-nyear'))document.getElementById('wd-nyear').value=e.toYear||2026;
+    document.getElementById('wd-ncountry').value=e.toCountry||'Costa Rica';
+    document.getElementById('wd-ncycle').value=e.toCycle||1;
+    updateWDLength('wd-nyear','wd-ncycle','wd-nlength');
+    document.getElementById('wd-nlength').value=e.toLength||'10w';
+  }
+  // Switch submit button to update mode
+  const btn=document.querySelector('[onclick="addWD()"]');
+  if(btn){
+    btn.textContent='✓ Update Entry';
+    btn.onclick=()=>updateWD(i);
+  }
+  // Scroll to form
+  document.getElementById('wd-cid').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function updateWD(i){
+  const type=document.querySelector('input[name="wdtype"]:checked').value;
+  const cid=document.getElementById('wd-cid').value.trim();
+  if(!cid){alert('Please enter a Client ID.');return;}
+  const dateEl=document.getElementById('wd-date');
+  const dateVal=dateEl?dateEl.value:WD_ENTRIES[i].date||'';
+  // Parse date for recordedMonth/Year
+  const parts=(dateVal||'').split('/');
+  let rec_month=WD_ENTRIES[i].recordedMonth||0, rec_year=WD_ENTRIES[i].recordedYear||new Date().getFullYear();
+  if(parts.length===3){try{rec_month=parseInt(parts[1])-1;rec_year=parseInt(parts[2]);}catch(e){}}
+  const updated={
+    type,
+    wdStatus:document.getElementById('wd-wdstatus')?document.getElementById('wd-wdstatus').value:'Completed',
+    clientId:cid,
+    year:+(document.getElementById('wd-year')?document.getElementById('wd-year').value:2026),
+    country:document.getElementById('wd-country').value,
+    cycle:+document.getElementById('wd-cycle').value,
+    length:document.getElementById('wd-length').value,
+    reason:document.getElementById('wd-reason').value,
+    date:dateVal,
+    recordedMonth:rec_month,
+    recordedYear:rec_year,
+  };
+  if(type==='deferral'){
+    updated.toYear=+(document.getElementById('wd-nyear')?document.getElementById('wd-nyear').value:2026);
+    updated.toCountry=document.getElementById('wd-ncountry').value;
+    updated.toCycle=+document.getElementById('wd-ncycle').value;
+    updated.toLength=document.getElementById('wd-nlength').value;
+  }
+  WD_ENTRIES[i]=updated;
+  saveState();
+  cloudSave('raleigh_wd', WD_ENTRIES);
+  // Reset button
+  const btn=document.querySelector('[onclick*="updateWD"]');
+  if(btn){btn.textContent='+ Add Entry';btn.onclick=addWD;}
+  renderWD();
+  toast('Entry updated ✓');
+}
+
+function delWD(i){
+  if(!confirm('Remove this entry?'))return;
+  WD_ENTRIES.splice(i,1);
+  saveState();
+  cloudSave('raleigh_wd', WD_ENTRIES);
+  renderWD();
+}
+
+function renderWDReasons(){
+  // Populate the reason dropdown
+  const sel=document.getElementById('wd-reason');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML=WD_REASONS.map(r=>`<option${r===cur?' selected':''}>${r}</option>`).join('');
+  }
+  // Render the manage-reasons chip list
+  const list=document.getElementById('wd-reasons-list');
+  if(!list)return;
+  list.innerHTML=WD_REASONS.map((r,i)=>{
+    const isDefault=WD_REASONS_DEFAULT.includes(r);
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:${isDefault?'#f0f4ff':'#f0fff4'};border:1.5px solid ${isDefault?'#c5d3f7':'#a8e6c0'};border-radius:20px;padding:3px 10px;font-size:.76rem;font-weight:600;color:var(--dg)">
+      ${r}${isDefault?'':` <button onclick="delWDReason(${i})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:.8rem;padding:0;line-height:1" title="Remove">✕</button>`}
+    </span>`;
+  }).join('');
+}
+function addWDReason(){
+  const inp=document.getElementById('wd-new-reason');
+  const val=inp.value.trim();
+  if(!val)return;
+  if(WD_REASONS.includes(val)){alert('That reason already exists.');return;}
+  WD_REASONS.push(val);
+  try{localStorage.setItem('raleigh_wd_reasons',JSON.stringify(WD_REASONS));}catch(e){}
+  inp.value='';
+  renderWDReasons();
+  cloudSave('raleigh_wd_reasons', WD_REASONS);
+  toast('Reason added ✓');
+}
+function delWDReason(i){
+  if(!confirm(`Remove "${WD_REASONS[i]}" from the list?`))return;
+  WD_REASONS.splice(i,1);
+  try{localStorage.setItem('raleigh_wd_reasons',JSON.stringify(WD_REASONS));}catch(e){}
+  renderWDReasons();
+  cloudSave('raleigh_wd_reasons', WD_REASONS);
+}
+function resetWDReasons(){
+  if(!confirm('Reset to default reasons? Any custom reasons will be removed.'))return;
+  WD_REASONS=[...WD_REASONS_DEFAULT];
+  try{localStorage.setItem('raleigh_wd_reasons',JSON.stringify(WD_REASONS));}catch(e){}
+  renderWDReasons();
+  toast('Reasons reset ✓');
+}
+
+function toggleWDMonth(id){
+  const el=document.getElementById(id);
+  const btn=document.getElementById(id+'-btn');
+  if(!el)return;
+  const open=el.style.display!=='none'&&el.style.display!=='';
+  el.style.display=open?'none':'block';
+  if(btn)btn.textContent=open?'▶':'▼';
+}
+
+function renderWD(){
+  const list=document.getElementById('wd-list');
+  if(!WD_ENTRIES.length){
+    list.innerHTML='<div style="background:white;border-radius:10px;border:1.5px solid var(--gr);padding:28px;text-align:center;color:var(--tt);font-size:.82rem">No withdrawals or deferrals recorded yet.</div>';
+    return;
+  }
+
+  const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const W_HDRS=['Client ID','Country','Cycle','Length','Reason','Recorded',''];
+  const D_HDRS=['Client ID','From','','To','Reason','Recorded',''];
+  const thStyle='background:#f4f6f5;color:var(--td);font-size:.74rem;font-weight:700;padding:5px 11px;text-align:left;border-bottom:1.5px solid var(--gr)';
+  const tdStyle='padding:5px 11px;font-size:.79rem;border-bottom:1px solid #eef2f1';
+
+    function statusDot(s){
+    const col=s==='Completed'?'#1D9E75':s==='In Progress'?'#f5a623':'#ccc';
+    return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};margin-right:5px" title="${s||''}"></span>`;
+  }
+  function entryRow(e,hdrs){
+    const isW=e.type==='withdrawal';
+    const del=`<button onclick="delWD(${e.i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:.9rem" title="Delete">✕</button><button onclick="editWD(${e.i})" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:.85rem;margin-left:4px" title="Edit">✏️</button>`;
+    const sdot=statusDot(e.wdStatus||'Completed');
+    if(isW) return `<tr>
+      <td style="${tdStyle}">${sdot}<span style="font-weight:600">${e.clientId}</span></td>
+      <td style="${tdStyle}">${e.country}</td>
+      <td style="${tdStyle}">C${e.cycle}</td>
+      <td style="${tdStyle}">${LM[e.length]||e.length}</td>
+      <td style="${tdStyle}">${e.reason}</td>
+      <td style="${tdStyle};color:var(--tt)">${e.date}</td>
+      <td style="${tdStyle}">${del}</td></tr>`;
+    return `<tr>
+      <td style="${tdStyle}">${sdot}<span style="font-weight:600">${e.clientId}</span></td>
+      <td style="${tdStyle}">${e.country}&nbsp;·&nbsp;C${e.cycle}&nbsp;·&nbsp;${LM[e.length]||e.length}</td>
+      <td style="${tdStyle};color:var(--tm);font-weight:700">→</td>
+      <td style="${tdStyle}">${e.toYear||''} ${e.toCountry}&nbsp;·&nbsp;C${e.toCycle}&nbsp;·&nbsp;${LM[e.toLength]||e.toLength}</td>
+      <td style="${tdStyle}">${e.reason}</td>
+      <td style="${tdStyle};color:var(--tt)">${e.date}</td>
+      <td style="${tdStyle}">${del}</td></tr>`;
+  }
+
+  function miniTable(entries, hdrs){
+    const th=hdrs.map(h=>`<th style="${thStyle}">${h}</th>`).join('');
+    const rows=entries.map(e=>entryRow(e,hdrs)).join('');
+    return `<table style="width:100%;border-collapse:collapse"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  window._wdMonthCopy={};
+  let html='';
+  const years=[...new Set(WD_ENTRIES.map(e=>e.recordedYear||e.year||2026))].sort().reverse();
+
+  years.forEach(yr=>{
+    const yEntries=WD_ENTRIES.map((e,i)=>({...e,i})).filter(e=>(e.recordedYear||e.year||2026)===yr);
+    const yW=yEntries.filter(e=>e.type==='withdrawal');
+    const yD=yEntries.filter(e=>e.type==='deferral');
+
+    // Year copy data
+    const yrMonths=[...new Set(yEntries.map(e=>e.recordedMonth??0))].sort((a,b)=>a-b);
+    // Fixed-width padding for clean Word paste
+    const pad=(s,n)=>String(s).padEnd(n,' ');
+    const yrCopyLines=[
+      `Year - ${yr}`,
+      pad('Month',14)+pad('Withdrawals',14)+'Deferrals',
+      '─'.repeat(40),
+    ];
+    yrMonths.forEach(m=>{
+      const mE=yEntries.filter(e=>(e.recordedMonth??0)===m);
+      const w=mE.filter(e=>e.type==='withdrawal').length;
+      const d=mE.filter(e=>e.type==='deferral').length;
+      yrCopyLines.push(pad(MONTH_NAMES[m],14)+pad(w,14)+d);
+    });
+    yrCopyLines.push('─'.repeat(40));
+    yrCopyLines.push(pad('Total',14)+pad(yW.length,14)+yD.length);
+    const yrCopyText=yrCopyLines.join('\n');
+    window._yrCopy=window._yrCopy||{};
+    window._yrCopy[yr]=yrCopyText;
+
+    // Year header with totals + copy button
+    html+=`<div style="background:var(--dg);color:white;padding:10px 16px;border-radius:10px 10px 0 0;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span style="font-size:.92rem;font-weight:700">${yr}</span>
+      <span style="font-size:.8rem;opacity:.75">${yW.length} withdrawal${yW.length!==1?'s':''} · ${yD.length} deferral${yD.length!==1?'s':''} · Total: ${yEntries.length}</span>
+      <button onclick="copyYrSummary(this)"
+        data-copy-yr="${yr}"
+        style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);color:white;padding:4px 12px;border-radius:6px;font-size:.75rem;cursor:pointer;white-space:nowrap;flex-shrink:0">
+        📋 Copy ${yr} summary
+      </button>
+    </div>
+    <div style="background:white;border-radius:0 0 10px 10px;border:1.5px solid var(--gr);border-top:none;overflow:hidden;margin-bottom:4px">`;
+
+    // Group by recorded month within this year
+    const months=[...new Set(yEntries.map(e=>e.recordedMonth??0))].sort((a,b)=>a-b);
+
+    months.forEach(m=>{
+      const mEntries=yEntries.filter(e=>(e.recordedMonth??0)===m);
+      const mW=mEntries.filter(e=>e.type==='withdrawal');
+      const mD=mEntries.filter(e=>e.type==='deferral');
+
+      // Build copy text for this month
+      const mCopyLines=[`${MONTH_NAMES[m]} ${yr} — ${mW.length} withdrawal${mW.length!==1?'s':''}, ${mD.length} deferral${mD.length!==1?'s':''}`,''];
+      if(mW.length){
+        mCopyLines.push('WITHDRAWALS');
+        mW.forEach(e=>mCopyLines.push(`  ${e.clientId}  ${e.country} C${e.cycle} ${LM[e.length]||e.length}  ${e.reason}  ${e.date||''}`));
+        mCopyLines.push('');
+      }
+      if(mD.length){
+        mCopyLines.push('DEFERRALS');
+        mD.forEach(e=>mCopyLines.push(`  ${e.clientId}  ${e.country} C${e.cycle} → ${e.toYear||''} ${e.toCountry} C${e.toCycle}  ${e.reason}  ${e.date||''}`));
+      }
+      const mCopyKey=`${yr}-${m}`;
+      window._wdMonthCopy[mCopyKey]=mCopyLines.join('\n');
+      const mCopyId=`wdm-copy-${yr}-${m}`;
+
+      const mId=`wdm-${yr}-${m}`;
+      html+=`<div style="background:#f4f6f5;padding:7px 14px;font-size:.78rem;font-weight:700;color:var(--tm);border-bottom:1px solid var(--gr);display:flex;justify-content:space-between;align-items:center">
+        <span onclick="toggleWDMonth('${mId}')" style="cursor:pointer;flex:1">${MONTH_NAMES[m]} &nbsp;—&nbsp; ${mW.length} withdrawal${mW.length!==1?'s':''}, ${mD.length} deferral${mD.length!==1?'s':''}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <button id="${mCopyId}" onclick="event.stopPropagation();navigator.clipboard.writeText(window._wdMonthCopy['${mCopyKey}']).then(()=>{const b=document.getElementById('${mCopyId}');b.textContent='✓ Copied';setTimeout(()=>{b.innerHTML='📋 Copy';},1500);})" style="background:var(--tl);color:#fff;border:none;border-radius:5px;padding:3px 9px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">📋 Copy</button>
+          <span id="${mId}-btn" onclick="toggleWDMonth('${mId}')" style="font-size:.7rem;cursor:pointer">▶</span>
+        </span>
+      </div>
+      <div id="${mId}" style="display:none">`;
+
+      if(mW.length) html+=miniTable(mW, W_HDRS);
+      if(mD.length) html+=miniTable(mD, D_HDRS);
+      html+=`</div>`;
+    });
+
+    html+=`</div>`;
+  });
+
+  list.innerHTML=html;
+}
+
+function renderLegacy(){
+  const lc=window._legacyCounts||ls('raleigh_legacy_counts')||{};
+  const el=document.getElementById('legacy-content');
+  if(!Object.keys(lc).length){
+    el.innerHTML='<p style="color:var(--tt);font-size:.82rem;padding:20px;text-align:center">No legacy bookings found in last upload.</p>';
+    return;
+  }
+  const legacyRows=Object.entries(lc).map(([k,v])=>{
+    const [yr,cy,dest]=k.split('|');
+    return {yr:+yr,cy:+cy,dest,count:v};
+  }).sort((a,b)=>a.yr-b.yr||a.cy-b.cy);
+  const thS='background:#daeef7;color:var(--dg);font-size:.78rem;font-weight:700;padding:6px 14px;text-align:left;border-bottom:1.5px solid var(--gr)';
+  const tdS='padding:6px 14px;font-size:.81rem;border-bottom:1px solid #eef2f1';
+  // Static date info for known legacy programmes
+  const LEGACY_DATES={'2027|2|South Africa':'07 Jun – 20 Jun 2027'};
+  let html=`<div style="background:var(--dg);color:white;padding:9px 16px;border-radius:10px 10px 0 0;font-size:.88rem;font-weight:700">Legacy Bookings</div>
+    <table style="width:100%;border-collapse:collapse;background:white;border-radius:0 0 10px 10px;overflow:hidden;border:1.5px solid var(--gr);border-top:none">
+    <thead><tr><th style="${thS}">Year</th><th style="${thS}">Cycle</th><th style="${thS}">Destination</th><th style="${thS}">Dates</th><th style="${thS};text-align:center">Venturers</th></tr></thead><tbody>`;
+  legacyRows.forEach(r=>{
+    const dateKey=`${r.yr}|${r.cy}|${r.dest}`;
+    html+=`<tr><td style="${tdS}">${r.yr}</td><td style="${tdS}">C${r.cy}</td><td style="${tdS}">${r.dest}</td><td style="${tdS};color:var(--tm)">${LEGACY_DATES[dateKey]||'See FileMaker'}</td><td style="${tdS};text-align:center;font-weight:700">${r.count}</td></tr>`;
+  });
+  // Store venturer counts for copy
+  window._legacyCountOnly=legacyRows.map(r=>r.count).join('\n');
+
+  html+=`</tbody></table>
+  <button onclick="navigator.clipboard.writeText(window._legacyCountOnly||'').then(()=>toast('Venturer counts copied!'))"
+    style="display:block;width:100%;padding:6px 16px;background:var(--tll);border:none;border-top:1px solid var(--tlm);font-size:.77rem;color:var(--tl);cursor:pointer;font-weight:600;text-align:right">
+    📋 Copy Venturer counts
+  </button>
+  <p style="font-size:.76rem;color:var(--tt);margin-top:8px">Legacy bookings are counted separately and not included in the 2026/2027 sales totals.</p>`;
+  el.innerHTML=html;
+}
+
+// Helper: show/hide discrepancy banner depending on whether current tab supports it
+function setDiscVis(showOnTab){
+  const dbox=document.getElementById('dbox');
+  if(!showOnTab){dbox.style.display='none';}
+  else{dbox.style.display=(dbox.classList.contains('show'))?'block':'none';}
+}
+
+function switchToLegacy(el){
+  document.querySelectorAll('.ytab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('r2026').style.display='none';
+  document.getElementById('r2027').style.display='none';
+  document.getElementById('r2028').style.display='none';
+  document.getElementById('rWD').style.display='none';
+  document.getElementById('rLegacy').style.display='block';
+  document.getElementById('rPartners').style.display='none';
+  document.querySelector('.abar').style.display='none';
+  document.getElementById('nph').closest('.panel').style.display='none';
+  document.getElementById('exph').closest('.panel').style.display='none';
+  document.getElementById('date-editor-panel').style.display='none';
+  setDiscVis(true);
+  renderLegacy();
+}
+
+function switchToWD(el){
+  document.querySelectorAll('.ytab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('r2026').style.display='none';
+  document.getElementById('r2027').style.display='none';
+  document.getElementById('r2028').style.display='none';
+  document.getElementById('rWD').style.display='block';
+  document.getElementById('rLegacy').style.display='none';
+  document.getElementById('rPartners').style.display='none';
+  document.querySelector('.abar').style.display='none';
+  document.getElementById('nph').closest('.panel').style.display='none';
+  document.getElementById('exph').closest('.panel').style.display='none';
+  document.getElementById('date-editor-panel').style.display='none';
+  setDiscVis(false);
+}
+
+function switchToPartners(el){
+  document.querySelectorAll('.ytab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('r2026').style.display='none';
+  document.getElementById('r2027').style.display='none';
+  document.getElementById('r2028').style.display='none';
+  document.getElementById('rWD').style.display='none';
+  document.getElementById('rLegacy').style.display='none';
+  document.getElementById('rPartners').style.display='block';
+  document.querySelector('.abar').style.display='none';
+  document.getElementById('nph').closest('.panel').style.display='none';
+  document.getElementById('exph').closest('.panel').style.display='none';
+  document.getElementById('date-editor-panel').style.display='none';
+  setDiscVis(false);
+  renderPartners();
+}
+
+// Override switchYear to also hide W&D and Partners
+const _origSwitchYear=typeof switchYear==='function'?switchYear:null;
+function switchYear(year,el){
+  document.querySelectorAll('.ytab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('r2026').style.display=year===2026?'block':'none';
+  document.getElementById('r2027').style.display=year===2027?'block':'none';
+  document.getElementById('r2028').style.display=year===2028?'block':'none';
+  document.getElementById('rWD').style.display='none';
+  document.getElementById('rLegacy').style.display='none';
+  document.getElementById('rPartners').style.display='none';
+  document.querySelector('.abar').style.display='flex';
+  document.getElementById('nph').closest('.panel').style.display='block';
+  document.getElementById('exph').closest('.panel').style.display='block';
+  document.getElementById('date-editor-panel').style.display='block';
+  // Only 2026 and 2027 show discrepancies; 2028 hides it
+  setDiscVis(year===2026||year===2027);
+  activeYear=year;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+// Restore last-updated label
+const lu=ls('raleigh_lastUpdated');if(lu)document.getElementById('last-updated').textContent=lu;
+// Load latest data from cloud if Firebase is configured
+if(FIREBASE_URL){
+  document.getElementById('last-updated').textContent='Loading from cloud…';
+  loadFromCloud().then(ok=>{
+    if(ok){ renderNats();renderExts();renderWDReasons();renderWD();renderAll();renderLegacy(); }
+  });
+}
+
+renderNats();
+renderExts();
+renderWDReasons();
+renderWD();
+renderDateEditor();
+renderAll();
+// Initialise W&D length dropdowns based on default year/cycle selection
+updateWDLength('wd-year','wd-cycle','wd-length');
+updateWDLength('wd-nyear','wd-ncycle','wd-nlength');
+// Initialise Partners form
+updatePtLength();
+renderPartnerNamesList();
+// Always start on year view — ensure panels visible
+document.getElementById('nph').closest('.panel').style.display='block';
+document.getElementById('exph').closest('.panel').style.display='block';
+document.getElementById('date-editor-panel').style.display='block';
+
+// Show summary if we have stored counts
+if(Object.keys(currentCounts).length){
+  updateSum();
+  const total=Object.values(currentCounts).reduce((a,b)=>a+b,0);
+  showS(`✅ Showing last uploaded data — ${total} venturers. Upload a new file to refresh.`,'ok');
+}
+</script>
+</body>
+</html>
